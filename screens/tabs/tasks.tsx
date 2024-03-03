@@ -4,7 +4,8 @@ import { faker } from "@faker-js/faker";
 import { ScrollView } from 'react-native-gesture-handler';
 import { DataTable } from 'react-native-paper';
 import { useEffect, useState } from 'react';
-import usePaperTheme from '../../hooks/usePaperTheme';
+import usePaperTheme from '@hooks/usePaperTheme';
+import React from 'react';
 
 const Tasks = () => {
     const [page, setPage] = useState<number>(0);
@@ -84,7 +85,8 @@ const Tasks = () => {
                 </DataTable>
             </ScrollView>
             <Portal>
-                <Dialog visible={modalVisible} onDismiss={() => setModalVisible(false)}>
+                {selectedTask && (
+                    <Dialog visible={modalVisible} onDismiss={() => setModalVisible(false)}>
                     <Dialog.Icon icon="chart-box-outline" />
                     <Dialog.Title>{selectedTask ? `${selectedTask.name}` : ''}</Dialog.Title>
                     <Dialog.Content>
@@ -102,6 +104,7 @@ const Tasks = () => {
                         <Button icon='hand-okay' mode="contained" onPress={() => setModalVisible(false)}>Okay</Button>
                     </Dialog.Actions>
                 </Dialog>
+                )}
             </Portal >
         </>
     );
@@ -111,4 +114,4 @@ const styles = StyleSheet.create({
     modal: { backgroundColor: 'white', padding: 20 }
 });
 
-export default Tasks;
+export default React.memo(React.forwardRef(Tasks));

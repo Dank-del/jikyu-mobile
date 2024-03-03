@@ -1,7 +1,8 @@
 import * as React from 'react';
 import { BottomNavigation, Text } from 'react-native-paper';
-import Tasks from './tabs/tasks';
-import Dashboard from './tabs/dashboard';
+import Tasks from '@screens/tabs/tasks';
+import Dashboard from '@screens/tabs/dashboard';
+import ProjectsPage from './tabs/projects';
 
 const DashboardRoute = () => <Text>Dashboard</Text>
 const ProjectsRoute = () => <Text>Projects</Text>
@@ -18,7 +19,7 @@ const BottomNav = () => {
 
     const renderScene = BottomNavigation.SceneMap({
         dashboard: Dashboard,
-        projects: ProjectsRoute,
+        projects: ProjectsPage,
         tasks: Tasks,
         invoices: InvoicesRoute,
     });

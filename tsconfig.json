@@ -1,6 +1,28 @@
 {
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
-    "strict": true
-  }
+    "strict": true,
+    "emitDecoratorMetadata": true,
+    "strictPropertyInitialization": false,
+    "experimentalDecorators": true,
+    "allowSyntheticDefaultImports": true,
+    "allowJs": true,
+    "paths": {
+      "@hooks/*": [
+        "./hooks/*"
+      ],
+      "@screens/*": [
+        "./screens/*"
+      ],
+      "@data/*": [
+        "./data/local/*"
+      ],
+      "@lib/*": [
+        "./lib/*"
+      ],
+      "@components/*": [
+        "./components/*"
+      ],
+    }
+  },
 }
