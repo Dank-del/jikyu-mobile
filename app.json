@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "jisan-mobile",
-    "slug": "jisan-mobile",
+    "name": "jikyu-mobile",
+    "slug": "jikyu-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -28,5 +28,5 @@
     },
     "sdkVersion": "50.0.0"
   },
-  "name": "jisan-mobile"
+  "name": "jikyu-mobile"
 }

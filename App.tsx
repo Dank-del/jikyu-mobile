@@ -49,7 +49,7 @@ export default function App() {
             <SafeAreaProvider>
               <NavigationContainer theme={colorScheme ? CombinedDarkTheme : CombinedDefaultTheme}>
                 {/* <Appbar.Header dark elevated>
-          <Appbar.Content title="Jisan" />
+          <Appbar.Content title="jikyu" />
         </Appbar.Header> */}
                 <Stack.Navigator initialRouteName="Login">
                   <Stack.Screen options={{
