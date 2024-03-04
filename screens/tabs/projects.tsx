@@ -97,7 +97,7 @@ const ProjectsPage = () => {
                                 <View style={{
                                     display: 'flex',
                                     flexDirection: 'row',
-                                    justifyContent: 'space-between',
+                                    justifyContent: 'center',
                                     width: '100%',
                                     gap: 10,
                                 }}>

@@ -18,10 +18,10 @@ const ClientForm = forwardRef(({ visible, setVisible, client: existingClient, up
     const db = useDatabase();
     const queryClient = useQueryClient()
     const onSubmit = handleSubmit(async data => {
-        await db.insert(clients).values({
-            name: data.name,
-        }).execute()
-        console.log("client-form-submit", data);
+        // await db.insert(clients).values({
+        //     name: data.name,
+        // }).execute()
+        // console.log("client-form-submit", data);
         const succ = await clientMutation.mutateAsync({
             ...data
         });

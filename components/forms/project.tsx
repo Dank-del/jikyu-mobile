@@ -12,6 +12,7 @@ import ClientForm from "./client";
 import { ClientFormStateProps } from "@lib/stateprops";
 import { useDatabase } from "@hooks/useDatabaseConnection";
 import { eq } from "drizzle-orm";
+import { DateTime } from 'luxon';
 
 interface ProjectFormProps {
     project?: typeof projects.$inferInsert;
@@ -65,7 +66,7 @@ const ProjectForm = forwardRef((props: ProjectFormProps, ref) => {
         }
     });
     const onSubmit = handleSubmit(async data => {
-        console.log(data);
+        console.log("proj-submit", data);
         if (!data.deadline) {
             createAlert({
                 title: "Error",
@@ -85,13 +86,12 @@ const ProjectForm = forwardRef((props: ProjectFormProps, ref) => {
             });
             return;
         }
-
         const succ = await projectMutation.mutateAsync(
             {
                 name: data.name,
                 description: data.description,
                 clientId: data.clientId,
-                deadline: data.deadline,
+                deadline: DateTime.fromJSDate(new Date(data.deadline)).toISO(),
             }
         )
 
@@ -164,7 +164,12 @@ const ProjectForm = forwardRef((props: ProjectFormProps, ref) => {
                                         onBlur={onBlur}
                                         onValueChange={onChange}
                                     >
-                                        <Picker.Item label="Select Client..." value="" />
+                                        {clientQuery.isFetched
+                                            &&
+                                            ((clientQuery.data?.length || 0) > 0)
+                                            ?
+                                            <Picker.Item label="Select Client..." value="" /> :
+                                            <Picker.Item label="No Client (Click New!)" value="" />}
                                         {clientQuery.data?.map((client) => (
                                             <Picker.Item key={client.id} label={client.name} value={client.id} />
                                         ))}
@@ -193,7 +198,7 @@ const ProjectForm = forwardRef((props: ProjectFormProps, ref) => {
                             rules={{ required: true }}
                             render={({ field: { onChange, onBlur, value } }) => {
                                 console.log(value);
-                                const cDate = props.project?.deadline ? new Date(Date.parse(props.project.deadline)) : new Date();
+                                const cDate = props.project?.deadline ? DateTime.fromISO(props.project.deadline) : DateTime.now();
                                 return (
                                     <>
                                         <Button
@@ -201,7 +206,7 @@ const ProjectForm = forwardRef((props: ProjectFormProps, ref) => {
                                             mode="outlined"
                                             onPress={() => setShowDatePicker(true)}
                                         >
-                                            {value ? value.toLocaleString() : "Select Deadline"}
+                                            {value ? String(value) : "Select Deadline"}
                                         </Button>
                                         <DatePickerModal
                                             mode="single"
@@ -209,8 +214,8 @@ const ProjectForm = forwardRef((props: ProjectFormProps, ref) => {
                                             visible={showDatePicker}
                                             presentationStyle="pageSheet"
                                             startDate={new Date()}
-                                            date={cDate}
-                                            onChange={({ date }) => onChange(date)}
+                                            date={cDate.toJSDate()}
+                                            // onChange={({ date }) => onChange(date)}
                                             allowEditing={true}
                                             onDismiss={() => setShowDatePicker(false)}
                                             onConfirm={({ date }) => { onChange(date); setShowDatePicker(false) }}
