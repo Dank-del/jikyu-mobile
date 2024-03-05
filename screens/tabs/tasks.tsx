@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { Appbar, Button, Card, Text } from 'react-native-paper';
 import { useQuery } from '@tanstack/react-query';
 import { useDatabase } from '@hooks/useDatabaseConnection';
@@ -64,9 +64,64 @@ const TasksPage: React.FC = () => {
             console.error('Error deleting task:', error);
         }
     };
+
     const [timerActive, setTimerActive] = useState(false);
-    const [startTime, setStartTime] = useState(null);
-    const [endTime, setEndTime] = useState(null);
+    const [startTime, setStartTime] = useState<number | null>(null);
+    const [elapsedTime, setElapsedTime] = useState(0);
+
+    useEffect(() => {
+        let interval: string | number | NodeJS.Timeout | undefined;
+        if (timerActive) {
+            interval = setInterval(() => {
+                setElapsedTime(prevElapsedTime => prevElapsedTime + 1);
+            }, 1000);
+        } else {
+            clearInterval(interval);
+        }
+        return () => clearInterval(interval);
+    }, [timerActive]);
+
+    const formatTime = (timeInSeconds: number): string => {
+        const hours = Math.floor(timeInSeconds / 3600);
+        const minutes = Math.floor((timeInSeconds % 3600) / 60);
+        const seconds = Math.floor(timeInSeconds % 60);
+        return `${padZero(hours)}:${padZero(minutes)}:${padZero(seconds)}`;
+    };
+
+    const padZero = (num: number): string => {
+        return num < 10 ? `0${num}` : num.toString();
+    };
+
+    const handleTimerToggle = async (taskId: typeof tasks.$inferInsert['id']) => {
+        if (!taskId) {
+            createAlert({
+                title: 'Error in toggling timer',
+                message: 'Task ID is undefined',
+            });
+            return;
+        }
+        const qtimeTrackings = timeTrackingsQuery.data?.filter(tt => tt.taskId === taskId);
+        const activeTimeTracking = qtimeTrackings?.find(tt => !tt.endTime);
+        if (activeTimeTracking) {
+            // set end time of active time tracking
+            const completeTimeTrack = await database.update(timeTrackings).set({
+                id: activeTimeTracking.id,
+                endTime: DateTime.now().toISO(),
+            });
+            console.log('Completed time tracking:', completeTimeTrack);
+        } else {
+            // start new timer if not active
+            const newTimetrack = await database.insert(timeTrackings).values({
+                taskId: taskId,
+                startTime: DateTime.now().toISO(),
+            }).execute();
+            console.log('New time tracking:', newTimetrack);
+        }
+        setTimerActive(prevTimerActive => !prevTimerActive);
+        if (!timerActive) {
+            setStartTime(Date.now());
+        }
+    };
 
     return (
         <>
@@ -100,26 +155,16 @@ const TasksPage: React.FC = () => {
                             const totalEarnings = rate ? totalHours * rate.ratePerHour : 0;
 
                             return (
-                                // <Card key={task.id} style={styles.card}>
-                                //     <Text style={styles.taskName}>{task.name}</Text>
-                                //     <Text style={styles.taskDescription}>{task.description}</Text>
-                                //     <View style={styles.buttonContainer}>
-                                //         <Button onPress={() => setTaskFormVisible({
-                                //             visible: true,
-                                //             edit: true,
-                                //             task,
-                                //         })}>Edit</Button>
-                                //         <Button onPress={() => handleDeleteTask(task.id)}>Delete</Button>
-                                //     </View>
-                                // </Card>
                                 <Card key={task.id} style={styles.card}>
                                     <Text style={styles.taskName}>{task.name}</Text>
                                     <Text style={styles.taskDescription}>{task.description}</Text>
-                                    <Text style={styles.timeSpent}>Time Spent: {totalHours}</Text>
-                                    <Text style={styles.earnings}>Earnings: {totalEarnings}</Text>
-                                    <View style={styles.timerContainer}>
-                                        <Button>{timerActive ? "Stop Timer" : "Start Timer"}</Button>
-                                    </View>
+                                    {totalHours > 0 && <Text style={styles.timeSpent}>Time Spent: {totalHours} hours</Text>}
+                                    {totalEarnings > 0 && <Text style={styles.timeSpent}>Earnings: ${totalEarnings}</Text>}
+                                    {timerActive && (
+                                        <View style={styles.timerContainer}>
+                                            <Text style={styles.timerText}>Elapsed Time: {formatTime(elapsedTime)}</Text>
+                                        </View>
+                                    )}
                                     <View style={styles.buttonContainer}>
                                         <Button onPress={() => {
                                             if (!task) {
@@ -136,6 +181,7 @@ const TasksPage: React.FC = () => {
                                                 taskId: task.id,
                                             })
                                         }}>Edit</Button>
+                                        <Button onPress={() => handleTimerToggle(task.id)}>{timerActive ? "Stop Timer" : "Start Timer"}</Button>
                                         <Button onPress={() => handleDeleteTask(task.id)}>Delete</Button>
                                     </View>
                                 </Card>
@@ -174,21 +220,17 @@ const styles = StyleSheet.create({
         color: 'gray',
         marginBottom: 5,
     },
-    earnings: {
-        fontSize: 14,
-        color: 'gray',
-        marginBottom: 5,
-    },
     timerContainer: {
         alignItems: 'center',
-        marginBottom: 10,
+        marginTop: 10,
     },
-    timerButton: {
-        fontSize: 16,
+    timerText: {
+        fontSize: 18,
+        fontWeight: 'bold',
     },
     buttonContainer: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
+        justifyContent: 'flex-end',
         marginTop: 10,
     },
 });

@@ -30,7 +30,7 @@ const rates = sqliteTable('rate', {
 const timeTrackings = sqliteTable('time_tracking', {
     id: integer('id').primaryKey({ autoIncrement: true }),
     startTime: text('start_time').notNull(),
-    endTime: text('end_time').notNull(),
+    endTime: text('end_time'),
     // hoursSpent: real('hours_spent').notNull(),
     taskId: integer('task_id').notNull(),
 });

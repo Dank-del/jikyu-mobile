@@ -15,6 +15,13 @@
       "when": 1709637068556,
       "tag": "0001_cute_vanisher",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1709652087178,
+      "tag": "0002_steady_fabian_cortez",
+      "breakpoints": true
     }
   ]
 }
