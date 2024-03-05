@@ -1,15 +1,21 @@
-import { projects, clients } from '@data/schema';
+import { projects, clients, tasks } from '@data/schema';
 
 type ProjectFormStateProps = {
     edit: boolean;
     visible: boolean;
-    projectId?: typeof projects.$inferInsert['id'];
+    project?: typeof projects.$inferInsert;
 };
 
 type ClientFormStateProps = {
     edit: boolean;
     visible: boolean;
-    clientId?: typeof clients.$inferInsert['id'];
+    client?: typeof clients.$inferInsert;
 };
 
-export { ProjectFormStateProps, ClientFormStateProps };
+type TaskFormStateProps = {
+    edit: boolean;
+    visible: boolean;
+    taskId?: typeof tasks.$inferInsert['id'];
+}
+
+export { ProjectFormStateProps, ClientFormStateProps, TaskFormStateProps };

@@ -1,117 +1,196 @@
-import { StyleSheet } from 'react-native';
-import { Appbar, Button, Dialog, Modal, Portal, Text } from 'react-native-paper';
-import { faker } from "@faker-js/faker";
-import { ScrollView } from 'react-native-gesture-handler';
-import { DataTable } from 'react-native-paper';
-import { useEffect, useState } from 'react';
-import usePaperTheme from '@hooks/usePaperTheme';
-import React from 'react';
+import React, { useState } from 'react';
+import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Appbar, Button, Card, Text } from 'react-native-paper';
+import { useQuery } from '@tanstack/react-query';
+import { useDatabase } from '@hooks/useDatabaseConnection';
+import { projects, rates, tasks, timeTrackings } from '@data/schema';
+import { eq } from 'drizzle-orm';
+import { createAlert } from '@lib/alert';
+import TaskForm from '@components/forms/task';
+import { TaskFormStateProps } from '@lib/stateprops';
+import { DateTime, Interval } from 'luxon';
 
-const Tasks = () => {
-    const [page, setPage] = useState<number>(0);
-    const { paperTheme, colorScheme } = usePaperTheme()
-    const [numberOfItemsPerPageList] = useState([8, 10, 20, 30, 40, 50, 100]);
-    const [itemsPerPage, onItemsPerPageChange] = useState(
-        numberOfItemsPerPageList[0]
-    );
+const TasksPage: React.FC = () => {
+    const database = useDatabase();
+    const tasksQuery = useQuery({
+        queryKey: ['tasks'],
+        queryFn: async () => {
+            return await database.select().from(tasks);
+        },
+    });
 
-    const [items, setItems] = useState(Array.from({ length: 100 }).map((_, index) => {
-        return {
-            id: index,
-            name: faker.lorem.words(),
-            project: faker.company.name(),
-            timeMins: Math.floor(Math.random() * 100),
-            monetized: Math.random() > 0.5,
-            rateHourly: Math.floor(Math.random() * 100),
-            currency: 'USD'
+    const timeTrackingsQuery = useQuery({
+        queryKey: ['timeTrackings'],
+        queryFn: async () => {
+            return await database.select().from(timeTrackings);
+        },
+    });
+
+    const projectsQuery = useQuery({
+        queryKey: ['projects'],
+        queryFn: async () => {
+            return await database.select().from(projects);
+        },
+    })
+
+    const rateQuery = useQuery({
+        queryKey: ['rate'],
+        queryFn: async () => {
+            return await database.select().from(rates);
+        },
+    });
+
+    const [taskFormVisible, setTaskFormVisible] = useState<TaskFormStateProps>({
+        edit: false,
+        visible: false,
+    });
+
+    const handleDeleteTask = async (taskId: typeof tasks.$inferInsert['id']) => {
+        if (!taskId) {
+            createAlert({
+                title: 'Error in deletion',
+                message: 'Id is undefined',
+            });
+            return;
         }
-    }));
-
-    const [selectedTask, setSelectedTask] = useState<any>(null);
-    const [modalVisible, setModalVisible] = useState(false);
-
-    const handleRowPress = (task: any) => {
-        setSelectedTask(task);
-        setModalVisible(true);
+        try {
+            await database.delete(tasks).where(eq(tasks.id, taskId)).execute();
+            tasksQuery.refetch();
+        } catch (error) {
+            createAlert({
+                title: 'Error in deletion',
+                message: 'Error deleting task',
+            });
+            console.error('Error deleting task:', error);
+        }
     };
+    const [timerActive, setTimerActive] = useState(false);
+    const [startTime, setStartTime] = useState(null);
+    const [endTime, setEndTime] = useState(null);
 
-    const from = page * itemsPerPage;
-    const to = Math.min((page + 1) * itemsPerPage, items.length);
-
-    useEffect(() => {
-        setPage(0);
-    }, [itemsPerPage]);
-
-    const fakeData = []
-    for (let i = 0; i < 100; i++) {
-        fakeData.push({
-            title: faker.lorem.words(),
-            subtitle: faker.lorem.sentence()
-        })
-    }
-    console.log(items);
     return (
         <>
             <Appbar.Header>
                 <Appbar.Content title="Tasks" />
+                <Appbar.Action icon="plus" onPress={() => setTaskFormVisible({
+                    visible: true,
+                    edit: false,
+                })} />
             </Appbar.Header>
             <ScrollView>
-                <DataTable>
-                    <DataTable.Header>
-                        <DataTable.Title>Task</DataTable.Title>
-                        <DataTable.Title numeric>Project</DataTable.Title>
-                        <DataTable.Title numeric>Time</DataTable.Title>
-                    </DataTable.Header>
+                <View style={styles.container}>
+                    {tasksQuery.isLoading && <Text>Loading...</Text>}
+                    {tasksQuery.isError && <Text>Error fetching tasks</Text>}
+                    {tasksQuery.isSuccess && timeTrackingsQuery.isSuccess && rateQuery.isSuccess && projectsQuery.isSuccess &&
+                        tasksQuery.data.map(task => {
+                            const timeTracking = timeTrackingsQuery.data.filter(tt => tt.taskId === task.id);
+                            // sum the time difference of end time and start of each time tracking
+                            const totalMinutes = timeTracking.reduce((acc, tt) => {
+                                if (tt.endTime && tt.startTime) {
+                                    const start = DateTime.fromISO(tt.startTime);
+                                    const end = DateTime.fromISO(tt.endTime);
+                                    return acc + Interval.fromDateTimes(start, end).length('minutes');
+                                }
+                                return acc;
+                            }, 0);
 
-                    {items.slice(from, to).map((item) => (
-                        <DataTable.Row key={item.id} onPress={() => handleRowPress(item)}>
-                            <DataTable.Cell>{item.name}</DataTable.Cell>
-                            <DataTable.Cell numeric>{item.project}</DataTable.Cell>
-                            <DataTable.Cell numeric>{item.timeMins} mins</DataTable.Cell>
-                        </DataTable.Row>
-                    ))}
+                            const totalHours = totalMinutes / 60;
 
-                    <DataTable.Pagination
-                        page={page}
-                        numberOfPages={Math.ceil(items.length / itemsPerPage)}
-                        onPageChange={(page) => setPage(page)}
-                        label={`${from + 1}-${to} of ${items.length}`}
-                        numberOfItemsPerPageList={numberOfItemsPerPageList}
-                        numberOfItemsPerPage={itemsPerPage}
-                        onItemsPerPageChange={onItemsPerPageChange}
-                        showFastPaginationControls
-                        selectPageDropdownLabel={'Rows per page'}
-                    />
-                </DataTable>
+                            const rate = rateQuery.data.find(r => r.clientId === (projectsQuery.data.find(p => p.id === task.projectId)?.clientId));
+                            const totalEarnings = rate ? totalHours * rate.ratePerHour : 0;
+
+                            return (
+                                // <Card key={task.id} style={styles.card}>
+                                //     <Text style={styles.taskName}>{task.name}</Text>
+                                //     <Text style={styles.taskDescription}>{task.description}</Text>
+                                //     <View style={styles.buttonContainer}>
+                                //         <Button onPress={() => setTaskFormVisible({
+                                //             visible: true,
+                                //             edit: true,
+                                //             task,
+                                //         })}>Edit</Button>
+                                //         <Button onPress={() => handleDeleteTask(task.id)}>Delete</Button>
+                                //     </View>
+                                // </Card>
+                                <Card key={task.id} style={styles.card}>
+                                    <Text style={styles.taskName}>{task.name}</Text>
+                                    <Text style={styles.taskDescription}>{task.description}</Text>
+                                    <Text style={styles.timeSpent}>Time Spent: {totalHours}</Text>
+                                    <Text style={styles.earnings}>Earnings: {totalEarnings}</Text>
+                                    <View style={styles.timerContainer}>
+                                        <Button>{timerActive ? "Stop Timer" : "Start Timer"}</Button>
+                                    </View>
+                                    <View style={styles.buttonContainer}>
+                                        <Button onPress={() => {
+                                            if (!task) {
+                                                createAlert({
+                                                    title: 'Error in editing task',
+                                                    message: 'Task is undefined',
+                                                });
+                                                return;
+                                            }
+                                            console.log('Task:', task);
+                                            setTaskFormVisible({
+                                                visible: true,
+                                                edit: true,
+                                                taskId: task.id,
+                                            })
+                                        }}>Edit</Button>
+                                        <Button onPress={() => handleDeleteTask(task.id)}>Delete</Button>
+                                    </View>
+                                </Card>
+                            )
+                        })}
+                </View>
             </ScrollView>
-            <Portal>
-                {selectedTask && (
-                    <Dialog visible={modalVisible} onDismiss={() => setModalVisible(false)}>
-                    <Dialog.Icon icon="chart-box-outline" />
-                    <Dialog.Title>{selectedTask ? `${selectedTask.name}` : ''}</Dialog.Title>
-                    <Dialog.Content>
-                        <Text variant="bodyMedium">{selectedTask ? `Project: ${selectedTask.project}` : ''}</Text>
-                        <Text>{selectedTask ? `Time: ${selectedTask.timeMins} mins` : ''}</Text>
-                        <Text>{selectedTask ? `Monetized: ${selectedTask.monetized}` : ''}</Text>
-                        <Text>{selectedTask ? `Rate: ${selectedTask.rateHourly} ${selectedTask.currency}` : ''} an hour</Text>
-                        <Text>Earned {(selectedTask.timeMins / 60 * selectedTask.rateHourly).toFixed(2)} {selectedTask.currency}</Text>
-                    </Dialog.Content>
-                    <Dialog.Actions>
-                        <Button icon='delete' mode="contained" onPress={() => {
-                            setItems(items.filter((item) => item.id !== selectedTask.id));
-                            setModalVisible(false);
-                        }} buttonColor='red'>delete</Button>
-                        <Button icon='hand-okay' mode="contained" onPress={() => setModalVisible(false)}>Okay</Button>
-                    </Dialog.Actions>
-                </Dialog>
-                )}
-            </Portal >
+            <TaskForm taskId={taskFormVisible.taskId} update={taskFormVisible.edit} visible={taskFormVisible.visible} setVisible={() => setTaskFormVisible({
+                ...taskFormVisible,
+                visible: false,
+            })} />
         </>
     );
-}
+};
 
 const styles = StyleSheet.create({
-    modal: { backgroundColor: 'white', padding: 20 }
+    container: {
+        padding: 10,
+    },
+    card: {
+        marginVertical: 10,
+        padding: 15,
+        marginHorizontal: 10,
+    },
+    taskName: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        marginBottom: 5,
+    },
+    taskDescription: {
+        fontSize: 16,
+        marginBottom: 5,
+    },
+    timeSpent: {
+        fontSize: 14,
+        color: 'gray',
+        marginBottom: 5,
+    },
+    earnings: {
+        fontSize: 14,
+        color: 'gray',
+        marginBottom: 5,
+    },
+    timerContainer: {
+        alignItems: 'center',
+        marginBottom: 10,
+    },
+    timerButton: {
+        fontSize: 16,
+    },
+    buttonContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginTop: 10,
+    },
 });
 
-export default React.memo(React.forwardRef(Tasks));
+export default React.memo(TasksPage);

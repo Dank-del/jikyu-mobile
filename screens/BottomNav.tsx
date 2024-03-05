@@ -4,8 +4,6 @@ import Tasks from '@screens/tabs/tasks';
 import Dashboard from '@screens/tabs/dashboard';
 import ProjectsPage from './tabs/projects';
 
-const DashboardRoute = () => <Text>Dashboard</Text>
-const ProjectsRoute = () => <Text>Projects</Text>
 const InvoicesRoute = () => <Text>Invoices</Text>
 
 const BottomNav = () => {

@@ -27,14 +27,18 @@ const ProjectForm = forwardRef((props: ProjectFormProps, ref) => {
     const db = useDatabase();
     // const [projectClient, setProjectClient] = React.useState<Client | undefined>(props.project?.client);
     const [showDatePicker, setShowDatePicker] = React.useState(false);
+    const { control, handleSubmit, formState: { errors }, reset } = useForm<typeof projects.$inferInsert>();
     const [clientFormVisible, setClientFormVisible] = useState<ClientFormStateProps>({
         edit: false,
         visible: false,
+        ...(!props.update && { clientId: undefined }),
     });
-    const { control, handleSubmit, formState: { errors } } = useForm<typeof projects.$inferInsert>();
     const clientQuery = useQuery({
         queryKey: ['clients'],
         queryFn: async () => {
+            if (!props.update) {
+                reset();
+            }
             return await db.select().from(clients);
         },
         refetchOnWindowFocus: "always",
@@ -62,6 +66,7 @@ const ProjectForm = forwardRef((props: ProjectFormProps, ref) => {
                 deadline: project.deadline,
             })
             queryClient.refetchQueries({ queryKey: ['projects'] });
+            reset();
             return newProj;
         }
     });
@@ -109,7 +114,7 @@ const ProjectForm = forwardRef((props: ProjectFormProps, ref) => {
         <View ref={ref as LegacyRef<View>}>
             <Portal>
                 <Dialog visible={props.visible} onDismiss={() => props.setVisible(false)}>
-                    <Dialog.Title>Edit Project</Dialog.Title>
+                    <Dialog.Title>{props.update ? "Edit Project" : "New Project"}</Dialog.Title>
                     <Dialog.Content style={{
                         display: 'flex',
                         gap: 5,
@@ -117,7 +122,7 @@ const ProjectForm = forwardRef((props: ProjectFormProps, ref) => {
                         <Controller
                             control={control}
                             name="name"
-                            defaultValue={props.project?.name}
+                            defaultValue={props.update ? props.project?.name : ""}
                             rules={{ required: true }}
                             render={({ field: { onChange, onBlur, value } }) => {
                                 return (
@@ -136,7 +141,7 @@ const ProjectForm = forwardRef((props: ProjectFormProps, ref) => {
                             control={control}
                             name="description"
                             rules={{ required: true }}
-                            defaultValue={props.project?.description}
+                            defaultValue={props.update ? props.project?.description : ""}
                             render={({ field: { onChange, onBlur, value } }) => {
                                 return (
                                     <TextInput
@@ -153,7 +158,7 @@ const ProjectForm = forwardRef((props: ProjectFormProps, ref) => {
                         <Controller
                             control={control}
                             name="clientId"
-                            defaultValue={props.project?.clientId}
+                            defaultValue={props.update ? props.project?.clientId : undefined}
                             rules={{ required: true }}
                             render={({ field: { onChange, onBlur, value } }) => {
                                 // clientQuery.refetch()
@@ -227,7 +232,7 @@ const ProjectForm = forwardRef((props: ProjectFormProps, ref) => {
                     </Dialog.Content>
                     <Dialog.Actions>
                         <Button onPress={onSubmit}>Save</Button>
-                        <Button onPress={() => props.setVisible(false)}>Cancel</Button>
+                        <Button onPress={() => { props.setVisible(false); reset() }}>Cancel</Button>
                     </Dialog.Actions>
                 </Dialog>
             </Portal>

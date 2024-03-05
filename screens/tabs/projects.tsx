@@ -1,27 +1,19 @@
 import React, { useState } from "react";
 import { View, ScrollView, StyleSheet } from "react-native";
 import { Appbar, Card, Text, Button } from "react-native-paper";
-import { projects, clients } from "@data/schema";
+import { projects, clients, tasks } from "@data/schema";
 import ProjectForm from "@components/forms/project";
 import ClientForm from "@components/forms/client";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createAlert } from "@lib/alert";
 import { useDatabase } from "@hooks/useDatabaseConnection";
 import { eq } from "drizzle-orm";
+import { ProjectFormStateProps, ClientFormStateProps } from "@lib/stateprops";
 
-type ProjectFormStateProps = {
-    edit: boolean;
-    visible: boolean;
-    project?: typeof projects.$inferInsert;
-};
 
-type ClientFormStateProps = {
-    edit: boolean;
-    visible: boolean;
-    clientId?: typeof clients.$inferSelect['id'];
-};
 
 const ProjectsPage = () => {
+    const queryClient = useQueryClient();
     const db = useDatabase();
     const projectsQuery = useQuery({
         queryKey: ['projects'],
@@ -54,7 +46,7 @@ const ProjectsPage = () => {
         }
         createAlert({
             title: "Delete Project",
-            message: "Are you sure you want to delete this project?",
+            message: "Are you sure you want to delete this project? it will delete any tasks related to it as well. This action CANNOT be undone.",
             buttons: [
                 {
                     text: "Cancel",
@@ -65,8 +57,10 @@ const ProjectsPage = () => {
                     text: "OK",
                     style: "destructive",
                     onPress: async () => {
+                        await db.delete(tasks).where(eq(tasks.projectId, id)).execute();
                         await db.delete(projects).where(eq(projects.id, id)).execute();
                         projectsQuery.refetch();
+                        queryClient.refetchQueries({ queryKey: ['tasks'] });
                     }
                 }
             ]
@@ -80,6 +74,7 @@ const ProjectsPage = () => {
                 <Appbar.Action icon="plus" onPress={() => setProjectFormVisible({
                     visible: true,
                     edit: false,
+                    project: undefined,
                 })} />
             </Appbar.Header>
             <ScrollView>
@@ -157,4 +152,4 @@ const styles = StyleSheet.create({
     }
 });
 
-export default React.memo(React.forwardRef(ProjectsPage));
+export default React.memo(ProjectsPage);

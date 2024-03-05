@@ -1,13 +1,18 @@
-import React from "react";
+import React, { useState } from "react";
 import { ScrollView, View, StyleSheet } from "react-native";
 import { Appbar, Card, Text, Button } from "react-native-paper";
 import { faker } from '@faker-js/faker';
 import { BarChart } from "react-native-gifted-charts";
 import usePaperTheme from "@hooks/usePaperTheme";
+import TaskForm from "@components/forms/task";
+import { TaskFormStateProps } from "@lib/stateprops";
+import { createAlert } from "@lib/alert";
+import ClientDialog from "@components/dialog/clientlist";
 
 const Dashboard = () => {
     // Generate fake data
     const { paperTheme } = usePaperTheme();
+    const [clientDialogVisible, setClientDialogVisible] = useState(false);
     const totalTasks = faker.number.int({ min: 20, max: 30 });
     const totalProjects = faker.number.int({ min: 10, max: 20 });
     const upcomingTasks = Array.from({ length: 5 }).map(() => faker.lorem.words());
@@ -20,6 +25,11 @@ const Dashboard = () => {
         { value: 256, label: 'S' },
         { value: 300, label: 'S' },
     ];
+    const [taskFormVisible, setTaskFormVisible] = useState<TaskFormStateProps>({
+        edit: false,
+        visible: false,
+    });
+
     return (
         <>
             <Appbar.Header>
@@ -64,16 +74,37 @@ const Dashboard = () => {
                     <Text style={styles.headerText}>
                         Quick Actions
                     </Text>
-                    <Button mode="contained" style={styles.quickActionButton}>
-                        Start Timer
-                    </Button>
-                    <Button mode="contained" style={styles.quickActionButton}>
-                        Add Task
-                    </Button>
+                    <View style={{
+                        display: 'flex',
+                        flexDirection: 'row',
+                        flexWrap: 'wrap',
+                        columnGap: 8,
+                    }}>
+                        <Button mode="contained" style={styles.quickActionButton} onPress={() => {
+                            createAlert({
+                                title: 'Start Timer',
+                                message: 'Click OK you fucking idiot'
+                            })
+                        }}>
+                            Start Timer
+                        </Button>
+                        <Button mode="contained" style={styles.quickActionButton} onPress={() => setTaskFormVisible({
+                            visible: true,
+                            edit: false,
+                        })}>
+                            Add Task
+                        </Button>
+                        <Button mode="contained" style={styles.quickActionButton} onPress={() => setClientDialogVisible(!clientDialogVisible)}>View Clients</Button>
+                    </View>
                     {/* Add more quick actions as needed */}
                 </Card>
                 {/* Add more widgets based on the suggested requirements */}
             </ScrollView>
+            <ClientDialog visible={clientDialogVisible} setVisible={setClientDialogVisible} />
+            <TaskForm update={taskFormVisible.edit} visible={taskFormVisible.visible} setVisible={() => setTaskFormVisible({
+                ...taskFormVisible,
+                visible: false,
+            })} />
         </>
     )
 }
@@ -103,4 +134,4 @@ const styles = StyleSheet.create({
     },
 });
 
-export default React.memo(React.forwardRef(Dashboard));
+export default React.memo(Dashboard);
