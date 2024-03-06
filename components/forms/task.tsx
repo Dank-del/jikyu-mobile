@@ -1,5 +1,4 @@
 import { projects, tasks } from "@data/schema";
-import { forwardRef, LegacyRef, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { View, StyleSheet } from "react-native";
 import React from "react";

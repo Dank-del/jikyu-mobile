@@ -22,6 +22,20 @@
       "when": 1709652087178,
       "tag": "0002_steady_fabian_cortez",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1709662233724,
+      "tag": "0003_smart_dragon_lord",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1709663456285,
+      "tag": "0004_blue_human_cannonball",
+      "breakpoints": true
     }
   ]
 }

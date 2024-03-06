@@ -1,17 +1,18 @@
 import { createContext, forwardRef, useContext } from "react";
 import { ExpoSQLiteDatabase, drizzle } from "drizzle-orm/expo-sqlite";
-import { openDatabaseSync } from "expo-sqlite/next";
+import { openDatabaseSync, openDatabaseAsync } from "expo-sqlite/next";
 import { useMigrations } from 'drizzle-orm/expo-sqlite/migrator';
 import migrations from '../drizzle/migrations';
 import { View, Text } from "react-native";
-
-const DatabaseContext = createContext<ExpoSQLiteDatabase | undefined>(undefined);
-const expo = openDatabaseSync("db.db");
-const db = drizzle(expo);
+import * as schema from '@data/schema';
+import { createAlert } from "@lib/alert";
+const DatabaseContext = createContext<ExpoSQLiteDatabase<typeof schema> | undefined>(undefined);
 
 export const DatabaseProvider = forwardRef<React.Ref<ExpoSQLiteDatabase>, { children: React.ReactNode }>(({ children }, ref) => {
+    const expo = openDatabaseSync("tasks.db");
+    const db = drizzle(expo, { schema });
     const { success, error } = useMigrations(db, migrations);
-
+    console.log("DatabaseProvider", success, error);
     if (error) {
         return (
             <View>
