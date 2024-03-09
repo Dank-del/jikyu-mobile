@@ -1,1 +1,0 @@
-ALTER TABLE time_tracking ADD `hours_spent` real NOT NULL;

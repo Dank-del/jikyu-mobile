@@ -5,36 +5,8 @@
     {
       "idx": 0,
       "version": "5",
-      "when": 1709479752904,
-      "tag": "0000_aberrant_tyger_tiger",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "5",
-      "when": 1709637068556,
-      "tag": "0001_cute_vanisher",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "5",
-      "when": 1709652087178,
-      "tag": "0002_steady_fabian_cortez",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "5",
-      "when": 1709662233724,
-      "tag": "0003_smart_dragon_lord",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "5",
-      "when": 1709663456285,
-      "tag": "0004_blue_human_cannonball",
+      "when": 1709993710672,
+      "tag": "0000_past_wonder_man",
       "breakpoints": true
     }
   ]

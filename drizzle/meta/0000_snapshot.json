@@ -1,11 +1,11 @@
 {
   "version": "5",
   "dialect": "sqlite",
-  "id": "7c5681a3-92ff-4967-8f83-5aeae5e3650a",
+  "id": "065255e4-9b0d-459d-a5e5-ff70f0d22a9c",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
-    "client": {
-      "name": "client",
+    "clients": {
+      "name": "clients",
       "columns": {
         "id": {
           "name": "id",
@@ -27,8 +27,8 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
-    "project": {
-      "name": "project",
+    "projects": {
+      "name": "projects",
       "columns": {
         "id": {
           "name": "id",
@@ -68,12 +68,26 @@
         }
       },
       "indexes": {},
-      "foreignKeys": {},
+      "foreignKeys": {
+        "projects_client_id_clients_id_fk": {
+          "name": "projects_client_id_clients_id_fk",
+          "tableFrom": "projects",
+          "tableTo": "clients",
+          "columnsFrom": [
+            "client_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
-    "rate": {
-      "name": "rate",
+    "rates": {
+      "name": "rates",
       "columns": {
         "id": {
           "name": "id",
@@ -98,12 +112,26 @@
         }
       },
       "indexes": {},
-      "foreignKeys": {},
+      "foreignKeys": {
+        "rates_client_id_clients_id_fk": {
+          "name": "rates_client_id_clients_id_fk",
+          "tableFrom": "rates",
+          "tableTo": "clients",
+          "columnsFrom": [
+            "client_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
-    "task": {
-      "name": "task",
+    "tasks": {
+      "name": "tasks",
       "columns": {
         "id": {
           "name": "id",
@@ -135,49 +163,26 @@
         }
       },
       "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
-    },
-    "time_spent_analytics": {
-      "name": "time_spent_analytics",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "integer",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": true
-        },
-        "date": {
-          "name": "date",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "hours_spent": {
-          "name": "hours_spent",
-          "type": "real",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "project_id": {
-          "name": "project_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
+      "foreignKeys": {
+        "tasks_project_id_projects_id_fk": {
+          "name": "tasks_project_id_projects_id_fk",
+          "tableFrom": "tasks",
+          "tableTo": "projects",
+          "columnsFrom": [
+            "project_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         }
       },
-      "indexes": {},
-      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
-    "time_tracking": {
-      "name": "time_tracking",
+    "time_trackings": {
+      "name": "time_trackings",
       "columns": {
         "id": {
           "name": "id",
@@ -197,14 +202,7 @@
           "name": "end_time",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "hours_spent": {
-          "name": "hours_spent",
-          "type": "real",
-          "primaryKey": false,
-          "notNull": true,
+          "notNull": false,
           "autoincrement": false
         },
         "task_id": {
@@ -216,7 +214,21 @@
         }
       },
       "indexes": {},
-      "foreignKeys": {},
+      "foreignKeys": {
+        "time_trackings_task_id_tasks_id_fk": {
+          "name": "time_trackings_task_id_tasks_id_fk",
+          "tableFrom": "time_trackings",
+          "tableTo": "tasks",
+          "columnsFrom": [
+            "task_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     }
