@@ -1,32 +1,21 @@
-import { Portal, Dialog, Button, TextInput, Text, Switch } from "react-native-paper";
+import { Dialog, Button, TextInput, Text, Switch } from "react-native-paper";
 import { useForm, Controller } from "react-hook-form";
-import { clients, rates } from "@data/schema";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { clients } from "@data/schema";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import React, { useState } from "react";
 import { useDatabase } from "@hooks/useDatabaseConnection";
 import { createAlert } from "@lib/alert";
 import { View, StyleSheet } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { useClients, useRates } from "@data/queries";
 
 const ClientForm = () => {
     const { id } = useLocalSearchParams();
     const router = useRouter();
     let update = !(id === 'new');
     const { control, handleSubmit, formState: { errors }, reset } = useForm<typeof clients.$inferInsert>();
-    const rateQuery = useQuery({
-        queryKey: ['rate'],
-        queryFn: async () => {
-            return await db.select().from(rates);
-        },
-        refetchOnWindowFocus: "always",
-    })
-    const clientsQuery = useQuery({
-        queryKey: ['clients'],
-        queryFn: async () => {
-            return await db.select().from(clients);
-        },
-        refetchOnWindowFocus: "always",
-    })
+    const rateQuery = useRates();
+    const clientsQuery = useClients();
     const existingClient = clientsQuery.data?.filter(c => c.id === parseInt(id!.toString()))[0];
     const [rate, setRate] = useState<number | undefined>(rateQuery.data?.find((r) => r.clientId === existingClient?.id)?.ratePerHour);
 

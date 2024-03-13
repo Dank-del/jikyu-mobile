@@ -1,44 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { Button, Card, Text } from 'react-native-paper';
-import { useQuery } from '@tanstack/react-query';
 import { useDatabase } from '@hooks/useDatabaseConnection';
-import { projects, rates, tasks, timeTrackings } from '@data/schema';
+import { tasks, timeTrackings } from '@data/schema';
 import { eq } from 'drizzle-orm';
 import { createAlert } from '@lib/alert';
 import { DateTime, Interval } from 'luxon';
 import { router } from 'expo-router';
+import { useProjects, useRates, useTasks, useTimeTrackings } from '@data/queries';
 
 const TasksPage: React.FC = () => {
     const database = useDatabase();
-    const tasksQuery = useQuery({
-        queryKey: ['tasks'],
-        queryFn: async () => {
-            return await database.select().from(tasks);
-        },
-    });
-
-    const timeTrackingsQuery = useQuery({
-        queryKey: ['timeTrackings'],
-        queryFn: async () => {
-            return await database.select().from(timeTrackings);
-        },
-    });
+    const tasksQuery = useTasks()
+    const timeTrackingsQuery = useTimeTrackings();
     console.log(timeTrackingsQuery);
-
-    const projectsQuery = useQuery({
-        queryKey: ['projects'],
-        queryFn: async () => {
-            return await database.select().from(projects);
-        },
-    })
-
-    const rateQuery = useQuery({
-        queryKey: ['rate'],
-        queryFn: async () => {
-            return await database.select().from(rates);
-        },
-    });
+    const projectsQuery = useProjects();
+    const rateQuery = useRates();
 
     const handleDeleteTask = async (taskId: typeof tasks.$inferInsert['id']) => {
         if (!taskId) {

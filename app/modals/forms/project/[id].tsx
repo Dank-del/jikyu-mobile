@@ -1,20 +1,20 @@
 import { clients, projects } from "@data/schema";
-import { forwardRef, LegacyRef, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
-import { View, StyleSheet } from "react-native";
+import { StyleSheet } from "react-native";
 import React from "react";
-import { Button, Dialog, Portal, TextInput } from "react-native-paper";
+import { Button, Dialog, TextInput, useTheme } from "react-native-paper";
 import { Picker } from "@react-native-picker/picker";
 import { DatePickerModal } from "react-native-paper-dates";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createAlert } from "@lib/alert";
-import { ClientFormStateProps } from "@lib/stateprops";
 import { useDatabase } from "@hooks/useDatabaseConnection";
 import { eq } from "drizzle-orm";
 import { DateTime } from 'luxon';
 import { router, useLocalSearchParams } from "expo-router";
+import { useClients } from "@data/queries";
 
 const ProjectForm = () => {
+    const theme = useTheme();
     const { id } = useLocalSearchParams();
     const update = !(id === 'new')
     const projectsQuery = useQuery({
@@ -27,24 +27,9 @@ const ProjectForm = () => {
     const existingProject = projectsQuery.data?.filter(p => p.id === parseInt(id!.toString()))[0];
     const queryClient = useQueryClient();
     const db = useDatabase();
-    // const [projectClient, setProjectClient] = React.useState<Client | undefined>(props.project?.client);
     const [showDatePicker, setShowDatePicker] = React.useState(false);
     const { control, handleSubmit, formState: { errors }, reset } = useForm<typeof projects.$inferInsert>();
-    const [clientFormVisible, setClientFormVisible] = useState<ClientFormStateProps>({
-        edit: false,
-        visible: false,
-        ...(!update && { clientId: undefined }),
-    });
-    const clientQuery = useQuery({
-        queryKey: ['clients'],
-        queryFn: async () => {
-            if (!update) {
-                reset();
-            }
-            return await db.select().from(clients);
-        },
-        refetchOnWindowFocus: "always",
-    });
+    const clientQuery = useClients();
     console.log("clients", clientQuery.data);
     const projectMutation = useMutation({
         mutationKey: ['projects'],
@@ -172,10 +157,10 @@ const ProjectForm = () => {
                                     &&
                                     ((clientQuery.data?.length || 0) > 0)
                                     ?
-                                    <Picker.Item label="Select Client..." value="" /> :
-                                    <Picker.Item label="No Client (Click New!)" value="" />}
+                                    <Picker.Item color={theme.colors.onSurface} label="Select Client..." value="" /> :
+                                    <Picker.Item color={theme.colors.onSurface} label="No Client (Click New!)" value="" />}
                                 {clientQuery.data?.map((client) => (
-                                    <Picker.Item key={client.id} label={client.name} value={client.id} />
+                                    <Picker.Item color={theme.colors.onSurface} key={client.id} label={client.name} value={client.id} />
                                 ))}
                             </Picker>
                         )

@@ -2,11 +2,12 @@ import React from "react";
 import { View, ScrollView, StyleSheet } from "react-native";
 import { Card, Text, Button, useTheme } from "react-native-paper";
 import { projects, clients, tasks } from "@data/schema";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { createAlert } from "@lib/alert";
 import { useDatabase } from "@hooks/useDatabaseConnection";
 import { eq } from "drizzle-orm";
 import { router } from "expo-router";
+import { useProjects } from "@data/queries";
 
 
 
@@ -14,14 +15,7 @@ const ProjectsPage = () => {
     const queryClient = useQueryClient();
     const db = useDatabase();
     const theme = useTheme();
-    const projectsQuery = useQuery({
-        queryKey: ['projects'],
-        queryFn: async () => {
-            // await ProjectRepository.clear();
-            return await db.select().from(projects);
-        },
-        // refetchInterval: 7000,
-    });
+    const projectsQuery = useProjects();
 
     console.log("projectsQuery", projectsQuery);
 

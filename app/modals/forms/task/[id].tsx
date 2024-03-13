@@ -1,36 +1,26 @@
-import { projects, tasks } from "@data/schema";
+import { tasks } from "@data/schema";
 import { useForm, Controller } from "react-hook-form";
-import { View, StyleSheet } from "react-native";
+import { StyleSheet } from "react-native";
 import React from "react";
-import { Button, Dialog, Portal, TextInput, Text, useTheme } from "react-native-paper";
+import { Button, Dialog, TextInput, Text, useTheme } from "react-native-paper";
 import { Picker } from "@react-native-picker/picker";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createAlert } from "@lib/alert";
 import { useDatabase } from "@hooks/useDatabaseConnection";
 import { router, useLocalSearchParams } from "expo-router";
+import { useProjects, useTasks } from "@data/queries";
 
 const TaskForm: React.FC = () => {
+    const theme = useTheme();
     const { id } = useLocalSearchParams()
     const update = !(id === 'new');
     console.log("TaskForm", id);
-    const tasksQuery = useQuery({
-        queryKey: ['tasks'],
-        queryFn: async () => {
-            return await db.select().from(tasks);
-        },
-        refetchOnWindowFocus: "always",
-    })
+    const tasksQuery = useTasks();
     const task = tasksQuery.data?.find(t => t.id === parseInt(id!.toString()));
     const queryClient = useQueryClient();
     const db = useDatabase();
     const { control, handleSubmit, formState: { errors }, reset } = useForm<typeof tasks.$inferInsert>();
-    const projectsQuery = useQuery({
-        queryKey: ['projects'],
-        queryFn: async () => {
-            return await db.select().from(projects);
-        },
-        refetchOnWindowFocus: "always",
-    });
+    const projectsQuery = useProjects();
 
     const taskMutation = useMutation({
         mutationKey: ['tasks'],
@@ -137,9 +127,9 @@ const TaskForm: React.FC = () => {
                                 onBlur={onBlur}
                                 onValueChange={onChange}
                             >
-                                <Picker.Item label="Select Project..." value="" />
+                                <Picker.Item color={theme.colors.onSurface} style={{ color: 'white' }} label="Select Project..." value="" />
                                 {projectsQuery.isFetched && projectsQuery.data?.map(project => (
-                                    <Picker.Item key={project.id} label={project.name} value={project.id} />
+                                    <Picker.Item color={theme.colors.onSurface} key={project.id} label={project.name} value={project.id} />
                                 ))}
                             </Picker>
                         )

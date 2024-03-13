@@ -7,18 +7,13 @@ import { Dialog, Button, useTheme } from "react-native-paper";
 import { createAlert } from "@lib/alert";
 import { DatabaseMethods } from "@data/methods";
 import { router } from "expo-router";
+import { useClients } from "@data/queries";
 
 const ClientDialog = () => {
     const db = useDatabase();
     const theme = useTheme();
     const dbMethods = new DatabaseMethods(db);
-    const clientsQuery = useQuery({
-        queryKey: ['clients'],
-        queryFn: async () => {
-            return await db.select().from(clients);
-        },
-
-    })
+    const clientsQuery = useClients();
 
     const handleClientDelete = async (clientId: typeof clients.$inferInsert['id']) => {
         if (!clientId) {
