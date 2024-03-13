@@ -166,16 +166,6 @@ const ProjectForm = () => {
                         )
                     }}
                 />
-                {/* <Picker
-                    selectedValue={projectClient?.id}
-                    style={styles.picker}
-                    onValueChange={(itemValue) => setProjectClient(clientQuery.data?.find(client => client.id === itemValue) || undefined)}
-                >
-                    <Picker.Item label="Select Client..." value="" />
-                    {clientQuery.data?.map((client, index) => (
-                        <Picker.Item key={index} label={client.name} value={client.id} />
-                    ))}
-                </Picker> */}
                 <Button mode="contained" onPress={() => router.push({
                     pathname: '/modals/forms/client/[id]',
                     params: {
@@ -188,8 +178,11 @@ const ProjectForm = () => {
                     defaultValue={existingProject?.deadline}
                     rules={{ required: true }}
                     render={({ field: { onChange, onBlur, value } }) => {
-                        console.log(value);
+                        if (typeof value == 'object') {
+                            value = DateTime.fromJSDate(value as unknown as Date).toISO();
+                        }
                         const cDate = existingProject?.deadline ? DateTime.fromISO(existingProject.deadline) : DateTime.now();
+
                         return (
                             <>
                                 <Button
@@ -197,7 +190,7 @@ const ProjectForm = () => {
                                     mode="outlined"
                                     onPress={() => setShowDatePicker(true)}
                                 >
-                                    {value ? String(value) : "Select Deadline"}
+                                    {value ? DateTime.fromISO(value).toLocaleString({ weekday: 'long', month: 'long', day: '2-digit', year: '2-digit' }) : "Select Deadline"}
                                 </Button>
                                 <DatePickerModal
                                     mode="single"

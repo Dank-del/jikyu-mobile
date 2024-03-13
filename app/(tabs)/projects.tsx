@@ -8,6 +8,7 @@ import { useDatabase } from "@hooks/useDatabaseConnection";
 import { eq } from "drizzle-orm";
 import { router } from "expo-router";
 import { useProjects } from "@data/queries";
+import { DateTime } from "luxon";
 
 
 
@@ -65,7 +66,7 @@ const ProjectsPage = () => {
                                 <Text style={styles.projectName}>{project.name}</Text>
                                 <Text style={styles.projectDescription}>{project.description}</Text>
                                 <Text style={styles.projectInfo}>Client: {client?.name}</Text>
-                                <Text style={styles.projectInfo}>Deadline: {project.deadline}</Text>
+                                <Text style={styles.projectInfo}>Deadline: {DateTime.fromISO(project.deadline!).toLocaleString({ weekday: 'long', month: 'long', day: '2-digit', year: '2-digit' })}</Text>
                                 <View style={{
                                     display: 'flex',
                                     flexDirection: 'row',
