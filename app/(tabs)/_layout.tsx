@@ -1,13 +1,18 @@
-import { Tabs } from "expo-router";
-import { Appbar, BottomNavigation, Icon } from "react-native-paper";
+import { Tabs, useRouter } from "expo-router";
+import { Appbar, BottomNavigation, Icon, useTheme } from "react-native-paper";
 import { CommonActions } from '@react-navigation/native';
 import { useColorScheme } from "react-native";
 import { CombinedDarkTheme, CombinedDefaultTheme } from "@lib/theme";
+import React from "react";
 
 export default function TabLayout() {
     const colorScheme = useColorScheme();
+    const theme = useTheme()
+    const router = useRouter();
     return (
-        <Tabs screenOptions={{
+        <Tabs sceneContainerStyle={{
+            backgroundColor: theme.colors.background
+        }} screenOptions={{
             header: (props) => (
                 <Appbar.Header>
                     <Appbar.Content title={props.options.title} />
@@ -45,15 +50,12 @@ export default function TabLayout() {
                 }}
                 getLabelText={({ route }) => {
                     const { options } = descriptors[route.key];
-                    const label =
-                        options.tabBarLabel !== undefined
-                            ? options.tabBarLabel
-                            : options.title !== undefined
-                                ? options.title
-                                // @ts-ignore
-                                : route.title;
-
-                    return label;
+                    return options.tabBarLabel !== undefined
+                        ? options.tabBarLabel
+                        : options.title !== undefined
+                            ? options.title
+                            // @ts-ignore
+                            : route.title;
                 }}
             />
         )}>
@@ -68,16 +70,34 @@ export default function TabLayout() {
                 name="projects"
                 options={{
                     title: 'Projects',
-                    
                     tabBarIcon: ({ color }) => <Icon size={28} source='briefcase-outline' color={color} />,
                     header: (props) => (
                         <Appbar.Header>
                             <Appbar.Content title="Projects" />
-                            {/* <Appbar.Action icon="plus" onPress={() => setProjectFormVisible({
-                                visible: true,
-                                edit: false,
-                                project: undefined,
-                            })} /> */}
+                            <Appbar.Action icon="plus" onPress={() => router.push({
+                                pathname: "modals/forms/project/[id]",
+                                params: {
+                                    id: 'new'
+                                }
+                            })} />
+                        </Appbar.Header>
+                    )
+                }}
+            />
+            <Tabs.Screen
+                name="tasks"
+                options={{
+                    title: 'Tasks',
+                    tabBarIcon: ({ color }) => <Icon size={28} source='format-list-bulleted' color={color} />,
+                    header: (props) => (
+                        <Appbar.Header>
+                            <Appbar.Content title="Tasks" />
+                            <Appbar.Action icon="plus" onPress={() => router.push({
+                                pathname: "modals/forms/task/[id]",
+                                params: {
+                                    id: 'new'
+                                }
+                            })} />
                         </Appbar.Header>
                     )
                 }}

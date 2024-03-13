@@ -1,22 +1,16 @@
-import { clients, projects, tasks } from "@data/schema";
+import { clients } from "@data/schema";
 import { useDatabase } from "@hooks/useDatabaseConnection";
-import { ClientFormStateProps } from "@lib/stateprops";
 import { useQuery } from "@tanstack/react-query";
-import React, { useState } from "react";
+import React from "react";
 import { View, Text, StyleSheet, FlatList, TouchableOpacity } from "react-native";
-import { Dialog, Portal, Button } from "react-native-paper";
-import ClientForm from "@components/forms/client";
+import { Dialog, Button, useTheme } from "react-native-paper";
 import { createAlert } from "@lib/alert";
-import { eq } from "drizzle-orm";
 import { DatabaseMethods } from "@data/methods";
+import { router } from "expo-router";
 
-interface ClientDialogProps {
-    visible: boolean;
-    setVisible: (isVisible: boolean) => void;
-}
-
-const ClientDialog = ({ visible, setVisible }: ClientDialogProps) => {
+const ClientDialog = () => {
     const db = useDatabase();
+    const theme = useTheme();
     const dbMethods = new DatabaseMethods(db);
     const clientsQuery = useQuery({
         queryKey: ['clients'],
@@ -25,10 +19,6 @@ const ClientDialog = ({ visible, setVisible }: ClientDialogProps) => {
         },
 
     })
-    const [clientFormVisible, setClientFormVisible] = useState<ClientFormStateProps>({
-        edit: false,
-        visible: false,
-    });
 
     const handleClientDelete = async (clientId: typeof clients.$inferInsert['id']) => {
         if (!clientId) {
@@ -71,22 +61,22 @@ const ClientDialog = ({ visible, setVisible }: ClientDialogProps) => {
     const renderItem = ({ item }: { item: typeof clients.$inferInsert }) => {
         return (
             <View style={styles.itemContainer}>
-                <TouchableOpacity onPress={() => setClientFormVisible({
-                    client: item,
-                    edit: true,
-                    visible: true
+                <TouchableOpacity onPress={() => router.push({
+                    pathname: '/modals/forms/client/[id]',
+                    params: {
+                        id: item.id,
+                    }
                 })}>
                     <View style={styles.item}>
-                        <Text style={styles.clientName}>{item.name}</Text>
+                        <Text style={[styles.clientName, { color: theme.colors.onSurface }]}>{item.name}</Text>
                     </View>
                 </TouchableOpacity>
                 <View style={styles.buttonContainer}>
-                    {/* <Button title="Edit" onPress={() => handleEditClient(item.id)} />
-                    <Button title="Delete" onPress={() => handleDeleteClient(item.id)} /> */}
-                    <Button style={styles.buttonContainer} icon='account-edit' onPress={() => setClientFormVisible({
-                        visible: true,
-                        edit: true,
-                        client: item,
+                    <Button style={styles.buttonContainer} icon='account-edit' onPress={() => router.push({
+                        pathname: '/modals/forms/client/[id]',
+                        params: {
+                            id: item.id,
+                        }
                     })}>
                         Edit
                     </Button>
@@ -99,35 +89,30 @@ const ClientDialog = ({ visible, setVisible }: ClientDialogProps) => {
     };
 
     return (
-        <Portal>
-            <Dialog visible={visible} onDismiss={() => setVisible(false)}>
-                <Dialog.Title>Clients</Dialog.Title>
-                <Dialog.Content>
-                    {clientsQuery.isFetched && (
-                        <FlatList
-                            data={clientsQuery.data}
-                            renderItem={renderItem}
-                            keyExtractor={(item) => item.id.toString()}
-                        />
-                    )}
-                </Dialog.Content>
-                <Dialog.Actions>
-                    <Button onPress={() => {
-                        setClientFormVisible({
-                            edit: false,
-                            visible: true,
-                            client: undefined,
-                        });
-                        // setVisible(false);
-                    }}>Add New Client</Button>
-                    <Button onPress={() => setVisible(false)}>Close</Button>
-                </Dialog.Actions>
-            </Dialog>
-            <ClientForm update={clientFormVisible.edit} client={clientFormVisible.client} visible={clientFormVisible.visible} setVisible={() => setClientFormVisible({
-                ...clientFormVisible,
-                visible: false,
-            })} />
-        </Portal>
+        <Dialog visible>
+            <Dialog.Title>Clients</Dialog.Title>
+            <Dialog.Content>
+                {clientsQuery.isFetched && (
+                    <FlatList
+                        data={clientsQuery.data}
+                        renderItem={renderItem}
+                        keyExtractor={(item) => item.id.toString()}
+                    />
+                )}
+            </Dialog.Content>
+            <Dialog.Actions>
+                <Button onPress={() => {
+                    router.push({
+                        pathname: '/modals/forms/client/[id]',
+                        params: {
+                            id: 'new',
+                        }
+                    })
+                    // setVisible(false);
+                }}>Add New Client</Button>
+                <Button onPress={() => router.push('../')}>Close</Button>
+            </Dialog.Actions>
+        </Dialog>
     );
 };
 

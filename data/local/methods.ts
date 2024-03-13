@@ -1,10 +1,11 @@
 import { clients, projects, tasks } from "@data/schema";
 import { eq } from "drizzle-orm";
 import { ExpoSQLiteDatabase } from "drizzle-orm/expo-sqlite";
+import * as schema from '@data/schema';
 
 class DatabaseMethods {
-    private db: ExpoSQLiteDatabase;
-    constructor(db: ExpoSQLiteDatabase) {
+    private db: ExpoSQLiteDatabase<typeof schema>;
+    constructor(db: ExpoSQLiteDatabase<typeof schema>) {
         this.db = db;
     }
     async deleteProjects(projectId: typeof projects.$inferInsert['id']) {

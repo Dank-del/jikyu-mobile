@@ -1,19 +1,16 @@
-import React, { useState } from "react";
-import { ScrollView, View, StyleSheet, useColorScheme } from "react-native";
-import { Appbar, Card, Text, Button, useTheme } from "react-native-paper";
+import React from "react";
+import { ScrollView, View, StyleSheet } from "react-native";
+import { Card, Text, Button, useTheme } from "react-native-paper";
 import { faker } from '@faker-js/faker';
 import { BarChart } from "react-native-gifted-charts";
 import usePaperTheme from "@hooks/usePaperTheme";
-import TaskForm from "@components/forms/task";
-import { TaskFormStateProps } from "@lib/stateprops";
 import { createAlert } from "@lib/alert";
-import ClientDialog from "@components/dialog/clientlist";
+import { router } from "expo-router";
 
 const Dashboard = () => {
     // Generate fake data
     const theme = useTheme();
     const t = usePaperTheme();
-    const [clientDialogVisible, setClientDialogVisible] = useState(false);
     const totalTasks = faker.number.int({ min: 20, max: 30 });
     const totalProjects = faker.number.int({ min: 10, max: 20 });
     const upcomingTasks = Array.from({ length: 5 }).map(() => faker.lorem.words());
@@ -26,15 +23,9 @@ const Dashboard = () => {
         { value: 256, label: 'S' },
         { value: 300, label: 'S' },
     ];
-    const [taskFormVisible, setTaskFormVisible] = useState<TaskFormStateProps>({
-        edit: false,
-        visible: false,
-    });
 
     return (
-        <View style={{
-            backgroundColor: theme.colors.background
-        }}>
+        <View>
             <ScrollView>
                 <Card style={styles.card}>
                     <Text style={styles.headerText}>
@@ -96,23 +87,22 @@ const Dashboard = () => {
                         }}>
                             Start Timer
                         </Button>
-                        <Button mode="contained" style={styles.quickActionButton} onPress={() => setTaskFormVisible({
-                            visible: true,
-                            edit: false,
-                        })}>
+                        <Button mode="contained" style={styles.quickActionButton}
+                            onPress={() => router.push({
+                                pathname: "modals/forms/task/[id]",
+                                params: {
+                                    id: 'new'
+                                }
+                            })}
+                        >
                             Add Task
                         </Button>
-                        <Button mode="contained" style={styles.quickActionButton} onPress={() => setClientDialogVisible(!clientDialogVisible)}>View Clients</Button>
+                        <Button mode="contained" style={styles.quickActionButton} onPress={() => router.push("/modals/dialog/clientlist")}>View Clients</Button>
                     </View>
                     {/* Add more quick actions as needed */}
                 </Card>
                 {/* Add more widgets based on the suggested requirements */}
             </ScrollView>
-            <ClientDialog visible={clientDialogVisible} setVisible={setClientDialogVisible} />
-            <TaskForm update={taskFormVisible.edit} visible={taskFormVisible.visible} setVisible={() => setTaskFormVisible({
-                ...taskFormVisible,
-                visible: false,
-            })} />
         </View>
     )
 }

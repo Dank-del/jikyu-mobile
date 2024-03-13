@@ -1,14 +1,12 @@
-import React, { useState } from "react";
+import React from "react";
 import { View, ScrollView, StyleSheet } from "react-native";
-import { Appbar, Card, Text, Button, useTheme } from "react-native-paper";
+import { Card, Text, Button, useTheme } from "react-native-paper";
 import { projects, clients, tasks } from "@data/schema";
-import ProjectForm from "@components/forms/project";
-import ClientForm from "@components/forms/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createAlert } from "@lib/alert";
 import { useDatabase } from "@hooks/useDatabaseConnection";
 import { eq } from "drizzle-orm";
-import { ProjectFormStateProps, ClientFormStateProps } from "@lib/stateprops";
+import { router } from "expo-router";
 
 
 
@@ -26,16 +24,6 @@ const ProjectsPage = () => {
     });
 
     console.log("projectsQuery", projectsQuery);
-
-    const [projectFormVisible, setProjectFormVisible] = useState<ProjectFormStateProps>({
-        edit: false,
-        visible: false,
-    });
-
-    const [clientFormVisible, setClientFormVisible] = useState<ClientFormStateProps>({
-        edit: false,
-        visible: false,
-    });
 
     const onDelete = (id: typeof projects.$inferInsert['id']) => {
         if (!id) {
@@ -91,30 +79,19 @@ const ProjectsPage = () => {
                                     width: '100%',
                                     gap: 10,
                                 }}>
-                                    <Button style={styles.optionButtons} mode="contained" onPress={() => setProjectFormVisible({
-                                        visible: true,
-                                        edit: true,
-                                        project: project,
+                                    <Button icon='application-edit' style={styles.optionButtons} mode="contained" onPress={() => router.push({
+                                        pathname: '/modals/forms/project/[id]',
+                                        params: {
+                                            id: project.id,
+                                        }
                                     })}>Edit</Button>
-                                    <Button mode="contained" onPress={() => onDelete(project.id)} buttonColor="red" style={styles.optionButtons}>Delete</Button>
+                                    <Button icon='delete' mode="contained" onPress={() => onDelete(project.id)} style={styles.optionButtons}>Delete</Button>
                                 </View>
                             </Card>
                         )
                     })}
                 </View>
             </ScrollView>
-            {/* Add New Project Dialog */}
-            <ProjectForm update={projectFormVisible.edit} visible={projectFormVisible.visible} project={projectFormVisible.project} setVisible={() => setProjectFormVisible({
-                ...projectFormVisible,
-                visible: false,
-            })} />
-            {/* Edit Project Dialog */}
-
-            {/* Add New Client Dialog */}
-            <ClientForm update={clientFormVisible.edit} visible={clientFormVisible.visible} setVisible={() => setClientFormVisible({
-                ...clientFormVisible,
-                visible: false,
-            })} />
         </View>
     )
 }

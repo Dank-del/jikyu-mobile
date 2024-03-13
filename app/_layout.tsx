@@ -65,6 +65,22 @@ function RootLayoutNav() {
                                 
                             }}>
                                 <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                                <Stack.Screen name='modals/forms/client/[id]' options={{
+                                    presentation: 'transparentModal',
+                                    headerShown: false
+                                }} />
+                                <Stack.Screen name='modals/forms/project/[id]' options={{
+                                    presentation: 'transparentModal',
+                                    headerShown: false
+                                }} />
+                                <Stack.Screen name='modals/forms/task/[id]' options={{
+                                    presentation: 'transparentModal',
+                                    headerShown: false
+                                }} />
+                                <Stack.Screen name='modals/dialog/clientlist' options={{
+                                    presentation: 'transparentModal',
+                                    headerShown: false
+                                }} />
                             </Stack>
                         </ThemeProvider>
                         <StatusBar style={colorScheme === 'dark' ? 'dark' : 'light'} />
