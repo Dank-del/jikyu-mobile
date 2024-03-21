@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import { Button, Card, Text } from 'react-native-paper';
+import { Button, Card, Text, useTheme } from 'react-native-paper';
 import { useDatabase } from '@hooks/useDatabaseConnection';
 import { tasks, timeTrackings } from '@data/schema';
 import { eq } from 'drizzle-orm';
@@ -13,11 +13,31 @@ const TasksPage: React.FC = () => {
     const database = useDatabase();
     const tasksQuery = useTasks()
     const timeTrackingsQuery = useTimeTrackings();
-    console.log(timeTrackingsQuery);
     const projectsQuery = useProjects();
     const rateQuery = useRates();
+    const theme = useTheme();
+    const [activeTaskId, setActiveTaskId] = useState<number | null>(null);
+    const [startTime, setStartTime] = useState<DateTime | null>(null);
+    const [elapsedTime, setElapsedTime] = useState<DateTime | null>(null);
+
+    useEffect(() => {
+        if (activeTaskId !== null) {
+            const interval = setInterval(() => {
+                // @ts-ignore
+                setElapsedTime(DateTime.local().diff(startTime, ['hours', 'minutes', 'seconds', 'milliseconds']));
+            }, 1000);
+            return () => clearInterval(interval);
+        }
+    }, [activeTaskId, startTime]);
 
     const handleDeleteTask = async (taskId: typeof tasks.$inferInsert['id']) => {
+        if (activeTaskId) {
+            createAlert({
+                title: 'Error in deletion',
+                message: 'Cannot delete task while timer is running',
+            });
+            return;
+        }
         if (!taskId) {
             createAlert({
                 title: 'Error in deletion',
@@ -25,73 +45,105 @@ const TasksPage: React.FC = () => {
             });
             return;
         }
-        try {
-            await database.delete(tasks).where(eq(tasks.id, taskId)).execute();
-            tasksQuery.refetch();
-        } catch (error) {
-            createAlert({
-                title: 'Error in deletion',
-                message: 'Error deleting task',
-            });
-            console.error('Error deleting task:', error);
-        }
+        createAlert({
+            title: 'Delete Task',
+            message: 'Are you sure you want to delete this task?',
+            buttons: [
+                {
+                    text: 'Cancel',
+                    style: 'cancel',
+                },
+                {
+                    text: 'Delete',
+                    onPress: async () => {
+                        try {
+                            await database.delete(tasks).where(eq(tasks.id, taskId)).execute();
+                            tasksQuery.refetch();
+                        } catch (error) {
+                            createAlert({
+                                title: 'Error in deletion',
+                                message: 'Error deleting task',
+                            });
+                            console.error('Error deleting task:', error);
+                        }
+                    },
+                },
+            ],
+        })
     };
 
-    const [timerActive, setTimerActive] = useState(false);
-    const [startTime, setStartTime] = useState<number | null>(null);
-    const [elapsedTime, setElapsedTime] = useState(0);
-
-    useEffect(() => {
-        let interval: string | number | NodeJS.Timeout | undefined;
-        if (timerActive) {
-            interval = setInterval(() => {
-                setElapsedTime(prevElapsedTime => prevElapsedTime + 1);
-            }, 1000);
-        } else {
-            clearInterval(interval);
-        }
-        return () => clearInterval(interval);
-    }, [timerActive]);
-
-    const formatTime = (timeInSeconds: number): string => {
-        const hours = Math.floor(timeInSeconds / 3600);
-        const minutes = Math.floor((timeInSeconds % 3600) / 60);
-        const seconds = Math.floor(timeInSeconds % 60);
-        return `${padZero(hours)}:${padZero(minutes)}:${padZero(seconds)}`;
+    const handleStart = async (taskId: typeof timeTrackings.$inferSelect['id']) => {
+        setActiveTaskId(taskId);
+        setStartTime(DateTime.local());
+        await saveStartTime(taskId);
     };
 
-    const padZero = (num: number): string => {
-        return num < 10 ? `0${num}` : num.toString();
+    const handleStop = async (taskId: typeof timeTrackings.$inferSelect['id']) => {
+        setActiveTaskId(null);
+        tasksQuery.refetch();
+        timeTrackingsQuery.refetch();
+        await saveStopTime(taskId);
     };
 
-    const handleTimerToggle = async (taskId: typeof tasks.$inferInsert['id']) => {
-        if (!taskId) {
-            createAlert({
-                title: 'Error in toggling timer',
-                message: 'Task ID is undefined',
-            });
-            return;
-        }
-        const qtimeTrackings = timeTrackingsQuery.data?.filter(tt => tt.taskId === taskId);
-        const activeTimeTracking = qtimeTrackings?.find(tt => !tt.endTime);
-        if (activeTimeTracking) {
-            // set end time of active time tracking
-            const completeTimeTrack = await database.update(timeTrackings).set({
-                id: activeTimeTracking.id,
-                endTime: DateTime.now().toISO(),
-            }).execute();
-            console.log('Completed time tracking:', completeTimeTrack);
-        } else {
-            // start new timer if not active
-            const newTimetrack = await database.insert(timeTrackings).values({
-                taskId: taskId,
+    const saveStartTime = async (taskId: typeof timeTrackings.$inferSelect['id']) => {
+        await database
+            .insert(timeTrackings)
+            .values({
+                taskId,
                 startTime: DateTime.now().toISO(),
-            }).execute();
-            console.log('New time tracking:', newTimetrack);
+            })
+            .execute();
+    };
+
+    const saveStopTime = async (taskId: typeof timeTrackings.$inferSelect['id']) => {
+        const lastTracking = await database.query.timeTrackings.findFirst({
+            orderBy: (timeTrackings, { desc }) => [desc(timeTrackings.id)],
+            where: eq(timeTrackings.taskId, taskId)
+        })
+        if (lastTracking) {
+            await database.update(timeTrackings)
+                .set({ endTime: DateTime.now().toISO() })
+                .where(eq(timeTrackings.id, lastTracking.id))
+                .execute();
         }
-        setTimerActive(prevTimerActive => !prevTimerActive);
-        if (!timerActive) {
-            setStartTime(Date.now());
+    };
+
+    function prettyPrintDuration(milliseconds: number): string {
+        const seconds = Math.floor(milliseconds / 1000);
+        const minutes = Math.floor(seconds / 60);
+        const hours = Math.floor(minutes / 60);
+        const days = Math.floor(hours / 24);
+
+        const daysRemainder = hours % 24;
+        const hoursRemainder = minutes % 60;
+        const minutesRemainder = seconds % 60;
+        const secondsRemainder = (milliseconds % 1000) / 1000;
+
+        let result = '';
+        if (days > 0) {
+            result += `${days}d `;
+        }
+        if (daysRemainder > 0) {
+            result += `${daysRemainder}h `;
+        }
+        if (hoursRemainder > 0) {
+            result += `${hoursRemainder}m `;
+        }
+        if (minutesRemainder > 0) {
+            result += `${minutesRemainder}s `;
+        }
+        if (secondsRemainder > 0) {
+            result += `${secondsRemainder.toFixed(3)}ms`;
+        }
+
+        return result.trim();
+    }
+
+    const handleTimerToggle = (taskId: number) => {
+        if (activeTaskId === taskId) {
+            handleStop(taskId);
+        } else {
+            handleStart(taskId);
         }
     };
 
@@ -104,58 +156,63 @@ const TasksPage: React.FC = () => {
                     {tasksQuery.isSuccess && timeTrackingsQuery.isSuccess && rateQuery.isSuccess && projectsQuery.isSuccess &&
                         tasksQuery.data.map(task => {
                             const timeTracking = timeTrackingsQuery.data.filter(tt => tt.taskId === task.id);
-                            // sum the time difference of end time and start of each time tracking
-                            const totalMinutes = timeTracking.reduce((acc, tt) => {
+                            const totalmilliseconds = timeTracking.reduce((acc, tt) => {
                                 if (tt.endTime && tt.startTime) {
                                     const start = DateTime.fromISO(tt.startTime);
                                     const end = DateTime.fromISO(tt.endTime);
-                                    return acc + Interval.fromDateTimes(start, end).length('minutes');
+                                    return acc + Interval.fromDateTimes(start, end).length('milliseconds');
                                 }
                                 return acc;
                             }, 0);
 
-                            const totalHours = totalMinutes / 60;
-
+                            const isActive = activeTaskId === task.id;
                             const rate = rateQuery.data.find(r => r.clientId === (projectsQuery.data.find(p => p.id === task.projectId)?.clientId));
-                            const totalEarnings = rate ? totalHours * rate.ratePerHour : 0;
+                            const totalEarnings = rate ? totalmilliseconds * rate.ratePerHour : 0;
 
                             return (
-                                <Card key={task.id} style={styles.card}>
+                                <Card key={task.id} style={[styles.card, !isActive && activeTaskId !== null ? { backgroundColor: theme.colors.surfaceDisabled } : {}]}>
                                     <Text style={styles.taskName}>{task.name}</Text>
                                     <Text style={styles.taskDescription}>{task.description}</Text>
-                                    {totalHours > 0 && <Text style={styles.timeSpent}>Time Spent: {totalHours} hours</Text>}
+                                    {totalmilliseconds > 0 && <Text style={styles.timeSpent}>{prettyPrintDuration(totalmilliseconds)} spent</Text>}
                                     {totalEarnings > 0 && <Text style={styles.timeSpent}>Earnings: ${totalEarnings}</Text>}
-                                    {timerActive && (
+                                    {isActive && (
                                         <View style={styles.timerContainer}>
-                                            <Text style={styles.timerText}>Elapsed Time: {formatTime(elapsedTime)}</Text>
+                                            <Text style={styles.timerText}>Elapsed Time: {elapsedTime ? elapsedTime.toFormat('hh:mm:ss.SSS') : '00:00:00.000'}</Text>
                                         </View>
                                     )}
                                     <View style={styles.buttonContainer}>
-                                        <Button onPress={() => {
-                                            if (!task) {
-                                                createAlert({
-                                                    title: 'Error in editing task',
-                                                    message: 'Task is undefined',
+                                        <Button
+                                            disabled={!isActive && Boolean(activeTaskId)}
+                                            onPress={() => {
+                                                if (activeTaskId) {
+                                                    createAlert({
+                                                        title: 'Error in deletion',
+                                                        message: 'Cannot delete task while timer is running',
+                                                    });
+                                                    return;
+                                                }
+                                                if (!task) {
+                                                    createAlert({
+                                                        title: 'Error in editing task',
+                                                        message: 'Task is undefined',
+                                                    });
+                                                    return;
+                                                }
+                                                router.push({
+                                                    pathname: '/modals/forms/task/[id]',
+                                                    params: {
+                                                        id: task.id,
+                                                    },
                                                 });
-                                                return;
-                                            }
-                                            console.log('Task:', task);
-                                            router.push({
-                                                pathname: '/modals/forms/task/[id]',
-                                                params: {
-                                                    id: task.id,
-                                                },
-                                            });
-                                        }}>Edit</Button>
-                                        <Button onPress={() => handleTimerToggle(task.id)}>{timerActive ? "Stop Timer" : "Start Timer"}</Button>
-                                        <Button onPress={() => handleDeleteTask(task.id)}>Delete</Button>
+                                            }}>Edit</Button>
+                                        <Button disabled={!isActive && Boolean(activeTaskId)} onPress={() => handleTimerToggle(task.id)}>{isActive ? "Stop Timer" : "Start Timer"}</Button>
+                                        <Button disabled={!isActive && Boolean(activeTaskId)} onPress={() => handleDeleteTask(task.id)}>Delete</Button>
                                     </View>
                                 </Card>
                             )
                         })}
                 </View>
             </ScrollView>
-
         </>
     );
 };
