@@ -16,18 +16,25 @@
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "sayan.jikyu-mobile"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.dank_as_fuck.jikyumobile"
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "sdkVersion": "50.0.0"
+    "sdkVersion": "50.0.0",
+    "extra": {
+      "eas": {
+        "projectId": "604181d2-93ef-4c31-bf9e-e2ff5770a759"
+      }
+    }
   },
   "name": "jikyu-mobile"
 }
