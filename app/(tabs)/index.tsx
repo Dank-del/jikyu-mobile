@@ -1,38 +1,46 @@
 import React from "react";
 import { ScrollView, View, StyleSheet } from "react-native";
 import { Card, Text, Button, useTheme } from "react-native-paper";
-import { faker } from '@faker-js/faker';
 import { BarChart } from "react-native-gifted-charts";
-import usePaperTheme from "@hooks/usePaperTheme";
-import { createAlert } from "@lib/alert";
 import { router } from "expo-router";
+import { useProjects, useTasks, useTimeTrackings } from "@data/queries";
+import { DateTime } from "luxon";
 
 const Dashboard = () => {
     // Generate fake data
     const theme = useTheme();
-    const t = usePaperTheme();
-    const totalTasks = faker.number.int({ min: 20, max: 30 });
-    const totalProjects = faker.number.int({ min: 10, max: 20 });
-    const upcomingTasks = Array.from({ length: 5 }).map(() => faker.lorem.words());
-    const barData = [
-        { value: 250, label: 'M' },
-        { value: 500, label: 'T' },
-        { value: 745, label: 'W' },
-        { value: 320, label: 'T' },
-        { value: 600, label: 'F' },
-        { value: 256, label: 'S' },
-        { value: 300, label: 'S' },
-    ];
+    const tasks = useTasks();
+    const projects = useProjects();
+    const timeTrackingData = useTimeTrackings();
+    const totalTasks = tasks.data?.length
+    const totalProjects = projects.data?.length
+    const weekdayInitials = ['M', 'T', 'W', 'T', 'F', 'S', 'S']; // Weekday initials array
+    // Map the data to the format needed for the bar chart
+    const barData = weekdayInitials.map(day => {
+        // Filter the data for the specific day
+        const dayData = timeTrackingData.data?.filter(entry => weekdayInitials[DateTime.fromISO(entry.startTime).localWeekday] === day);
+
+        // Sum the time spent for the day
+        // sum the difference between the start and end time of each entry
+        const value = dayData?.reduce((acc, curr) => {
+            const startTime = DateTime.fromISO(curr.startTime);
+            const endTime = DateTime.fromISO(curr.endTime!);
+            return acc + endTime.diff(startTime, 'hours').hours;
+        }, 0) || 0;
+
+        // Return the data point for the bar chart
+        return { value, label: day };
+    });
 
     return (
         <View>
             <ScrollView>
                 <Card style={styles.card}>
                     <Text style={styles.headerText}>
-                        {totalTasks} Tasks
+                        {totalTasks} Task(s)
                     </Text>
                     <Text style={styles.subHeaderText}>
-                        for {totalProjects} Projects
+                        for {totalProjects} Project(s)
                     </Text>
                 </Card>
                 <Card style={styles.card}>
@@ -40,9 +48,9 @@ const Dashboard = () => {
                         Upcoming Tasks
                     </Text>
                     <View style={styles.upcomingTasksContainer}>
-                        {upcomingTasks.map((task, index) => (
+                        {tasks.data?.map((task, index) => (
                             <Text key={index} style={styles.upcomingTask}>
-                                {task}
+                                {task.name}
                             </Text>
                         ))}
                     </View>
@@ -53,7 +61,7 @@ const Dashboard = () => {
                     </Text>
                     <View style={{
                         overflow: 'hidden'
-                        
+
                     }}>
                         <BarChart
                             xAxisLabelTextStyle={{
@@ -80,12 +88,14 @@ const Dashboard = () => {
                         columnGap: 8,
                     }}>
                         <Button mode="contained" style={styles.quickActionButton} onPress={() => {
-                            createAlert({
-                                title: 'Start Timer',
-                                message: 'Click OK you fucking idiot'
+                            router.push({
+                                pathname: "modals/forms/project/[id]",
+                                params: {
+                                    id: 'new'
+                                }
                             })
                         }}>
-                            Start Timer
+                            Add Project
                         </Button>
                         <Button mode="contained" style={styles.quickActionButton}
                             onPress={() => router.push({
