@@ -9,6 +9,7 @@ import { useColorScheme } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { CombinedDarkTheme, CombinedDefaultTheme, DarkTheme } from '@lib/theme';
 import { SnackbarProvider } from '@components/SnackbarProvider';
+import { SettingsProvider, useSettings } from '@lib/settings';
 
 export {
     ErrorBoundary,
@@ -21,19 +22,31 @@ export const unstable_settings = {
 };
 
 export default function RootLayout() {
-    return <RootLayoutNav />;
+    return (
+        <SettingsProvider>
+            <RootLayoutNav />
+        </SettingsProvider>
+    );
 }
 
 const client = new QueryClient();
 
 function RootLayoutNav() {
-    const colorScheme = useColorScheme();
+    const systemScheme = useColorScheme();
+    const { settings, isLoaded } = useSettings();
+
+    if (!isLoaded) return null;
+
+    const isDark = settings.themeMode === 'system'
+        ? systemScheme === 'dark'
+        : settings.themeMode === 'dark';
+
     return (
         <DatabaseProvider>
             <QueryClientProvider client={client}>
                 <GestureHandlerRootView style={{ flex: 1 }}>
-                    <PaperProvider theme={colorScheme === 'dark' ? CombinedDarkTheme : CombinedDefaultTheme}>
-                        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+                    <PaperProvider theme={isDark ? CombinedDarkTheme : CombinedDefaultTheme}>
+                        <ThemeProvider value={isDark ? DarkTheme : DefaultTheme}>
                             <SnackbarProvider>
                                 <Stack>
                                     <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
@@ -56,10 +69,16 @@ function RootLayoutNav() {
                                     <Stack.Screen name='project/[id]' options={{
                                         headerShown: false
                                     }} />
+                                    <Stack.Screen name='settings' options={{
+                                        headerShown: false
+                                    }} />
+                                    <Stack.Screen name='timer' options={{
+                                        headerShown: false
+                                    }} />
                                 </Stack>
                             </SnackbarProvider>
                         </ThemeProvider>
-                        <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
+                        <StatusBar style={isDark ? 'light' : 'dark'} />
                     </PaperProvider>
                 </GestureHandlerRootView>
             </QueryClientProvider>

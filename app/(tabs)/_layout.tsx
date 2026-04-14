@@ -3,12 +3,19 @@ import { Appbar, BottomNavigation, Icon, useTheme } from "react-native-paper";
 import { CommonActions } from '@react-navigation/native';
 import { useColorScheme } from "react-native";
 import { CombinedDarkTheme, CombinedDefaultTheme } from "@lib/theme";
+import { useSettings } from "@lib/settings";
 import React from "react";
 
 export default function TabLayout() {
-    const colorScheme = useColorScheme();
+    const systemScheme = useColorScheme();
+    const { settings } = useSettings();
     const theme = useTheme()
     const router = useRouter();
+
+    const isDark = settings.themeMode === 'system'
+        ? systemScheme === 'dark'
+        : settings.themeMode === 'dark';
+
     return (
         <Tabs sceneContainerStyle={{
             backgroundColor: theme.colors.background
@@ -18,10 +25,10 @@ export default function TabLayout() {
                     <Appbar.Content title={props.options.title} />
                 </Appbar.Header>
             )
-            
+
         }} tabBar={({ navigation, state, descriptors, insets }) => (
             <BottomNavigation.Bar
-                theme={colorScheme === 'dark' ? CombinedDarkTheme : CombinedDefaultTheme}
+                theme={isDark ? CombinedDarkTheme : CombinedDefaultTheme}
                 navigationState={state}
                 safeAreaInsets={insets}
                 onTabPress={({ route, preventDefault }) => {
@@ -64,6 +71,12 @@ export default function TabLayout() {
                 options={{
                     title: 'Dashboard',
                     tabBarIcon: ({ color }) => <Icon size={28} source='view-dashboard-outline' color={color} />,
+                    header: (props) => (
+                        <Appbar.Header>
+                            <Appbar.Content title="Dashboard" />
+                            <Appbar.Action icon="cog" onPress={() => router.push('/settings')} />
+                        </Appbar.Header>
+                    )
                 }}
             />
             <Tabs.Screen

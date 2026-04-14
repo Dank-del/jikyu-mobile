@@ -128,6 +128,7 @@ const ProjectsPage = () => {
                                         Edit
                                     </Button>
                                     <Button
+                                        mode="outlined"
                                         icon="delete"
                                         textColor={theme.colors.error}
                                         onPress={() => onDelete(project.id)}

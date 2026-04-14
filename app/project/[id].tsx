@@ -4,6 +4,8 @@ import { Appbar, Button, Card, Chip, Text, useTheme } from 'react-native-paper';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useProjects, useTasks, useTimeTrackings, useRates, useClients } from '@data/queries';
 import { DateTime, Interval } from 'luxon';
+import { useSettings } from '@lib/settings';
+import { formatCurrency } from '@lib/currencies';
 
 const ProjectDetail: React.FC = () => {
     const { id } = useLocalSearchParams();
@@ -13,6 +15,7 @@ const ProjectDetail: React.FC = () => {
     const timeTrackingsQuery = useTimeTrackings();
     const rateQuery = useRates();
     const clientsQuery = useClients();
+    const { settings } = useSettings();
 
     const project = projectsQuery.data?.find(p => p.id === parseInt(id!.toString()));
     const projectTasks = tasksQuery.data?.filter(t => t.projectId === project?.id) ?? [];
@@ -103,7 +106,7 @@ const ProjectDetail: React.FC = () => {
                             {rate && (
                                 <View style={styles.statItem}>
                                     <Text variant="headlineSmall" style={{ color: theme.colors.primary }}>
-                                        ${totalEarnings.toFixed(2)}
+                                        {formatCurrency(totalEarnings, settings.currency)}
                                     </Text>
                                     <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>Earnings</Text>
                                 </View>

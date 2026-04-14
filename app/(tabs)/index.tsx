@@ -5,6 +5,8 @@ import { BarChart } from "react-native-gifted-charts";
 import { router } from "expo-router";
 import { useProjects, useRates, useTasks, useTimeTrackings } from "@data/queries";
 import { DateTime } from "luxon";
+import { useSettings } from "@lib/settings";
+import { formatCurrency } from "@lib/currencies";
 
 const Dashboard = () => {
     const theme = useTheme();
@@ -12,6 +14,7 @@ const Dashboard = () => {
     const projects = useProjects();
     const timeTrackingData = useTimeTrackings();
     const rateQuery = useRates();
+    const { settings } = useSettings();
     const totalTasks = tasks.data?.length ?? 0;
     const totalProjects = projects.data?.length ?? 0;
 
@@ -86,7 +89,7 @@ const Dashboard = () => {
                             <View style={styles.earningsRow}>
                                 <View style={styles.earningsItem}>
                                     <Text variant="headlineSmall" style={{ color: theme.colors.primary }}>
-                                        ${weeklyEarnings.toFixed(2)}
+                                        {formatCurrency(weeklyEarnings, settings.currency)}
                                     </Text>
                                     <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
                                         This week
@@ -94,7 +97,7 @@ const Dashboard = () => {
                                 </View>
                                 <View style={styles.earningsItem}>
                                     <Text variant="headlineSmall" style={{ color: theme.colors.primary }}>
-                                        ${monthlyEarnings.toFixed(2)}
+                                        {formatCurrency(monthlyEarnings, settings.currency)}
                                     </Text>
                                     <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
                                         This month

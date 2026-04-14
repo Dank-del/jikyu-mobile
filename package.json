@@ -11,6 +11,7 @@
     "db:generate": "drizzle-kit generate:sqlite"
   },
   "dependencies": {
+    "@react-native-async-storage/async-storage": "1.21.0",
     "@react-native-picker/picker": "2.6.1",
     "@react-navigation/native-stack": "^6.9.18",
     "@tanstack/react-query": "^5.24.1",
@@ -20,6 +21,7 @@
     "expo": "~50.0.7",
     "expo-dev-client": "~3.3.9",
     "expo-linking": "~6.2.2",
+    "expo-notifications": "~0.27.8",
     "expo-router": "~3.4.10",
     "expo-splash-screen": "~0.26.5",
     "expo-sqlite": "^13.2.0",

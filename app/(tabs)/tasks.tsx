@@ -8,6 +8,9 @@ import { createAlert } from '@lib/alert';
 import { DateTime, Interval } from 'luxon';
 import { router } from 'expo-router';
 import { useProjects, useRates, useTasks, useTimeTrackings } from '@data/queries';
+import { useSettings } from '@lib/settings';
+import { formatCurrency } from '@lib/currencies';
+import { showTimerNotification, dismissTimerNotification, requestNotificationPermissions } from '@lib/timerNotification';
 
 const TasksPage: React.FC = () => {
     const database = useDatabase();
@@ -16,6 +19,7 @@ const TasksPage: React.FC = () => {
     const projectsQuery = useProjects();
     const rateQuery = useRates();
     const theme = useTheme();
+    const { settings } = useSettings();
     const [activeTaskId, setActiveTaskId] = useState<number | null>(null);
     const [startTime, setStartTime] = useState<DateTime | null>(null);
     const [elapsedTime, setElapsedTime] = useState<DateTime | null>(null);
@@ -111,6 +115,12 @@ const TasksPage: React.FC = () => {
         // Auto-set status to in_progress
         await database.update(tasks).set({ status: 'in_progress' }).where(eq(tasks.id, taskId)).execute();
         tasksQuery.refetch();
+
+        // Show notification and navigate to timer screen
+        const taskName = tasksQuery.data?.find(t => t.id === taskId)?.name ?? 'Task';
+        await requestNotificationPermissions();
+        await showTimerNotification(taskName, '00:00:00');
+        router.push({ pathname: '/timer', params: { taskId: taskId.toString() } });
     };
 
     const handleStop = async (taskId: typeof timeTrackings.$inferSelect['id']) => {
@@ -126,9 +136,21 @@ const TasksPage: React.FC = () => {
                 .where(eq(timeTrackings.id, lastTracking.id))
                 .execute();
         }
+        await dismissTimerNotification();
         tasksQuery.refetch();
         timeTrackingsQuery.refetch();
     };
+
+    // Re-sync active timer state when returning from timer screen
+    useEffect(() => {
+        if (timeTrackingsQuery.data) {
+            const activeTracking = timeTrackingsQuery.data.find(tt => tt.endTime === null);
+            if (!activeTracking && activeTaskId !== null) {
+                setActiveTaskId(null);
+                setElapsedTime(null);
+            }
+        }
+    }, [timeTrackingsQuery.data]);
 
     const handleTimerToggle = (taskId: number) => {
         if (activeTaskId === taskId) {
@@ -252,14 +274,23 @@ const TasksPage: React.FC = () => {
                                     {totalmilliseconds > 0 && (
                                         <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginTop: 4 }}>
                                             {prettyPrintDuration(totalmilliseconds)} spent
-                                            {totalEarnings > 0 ? `  ·  $${totalEarnings.toFixed(2)} earned` : ''}
+                                            {totalEarnings > 0 ? `  ·  ${formatCurrency(totalEarnings, settings.currency)} earned` : ''}
                                         </Text>
                                     )}
                                     {isActive && (
                                         <View style={styles.timerContainer}>
-                                            <Text variant="headlineSmall" style={{ color: theme.colors.primary, fontVariant: ['tabular-nums'] }}>
+                                            <Text variant="titleLarge" style={{ color: theme.colors.primary, fontVariant: ['tabular-nums'] }}>
                                                 {elapsedTime ? elapsedTime.toFormat('hh:mm:ss') : '00:00:00'}
                                             </Text>
+                                            <Button
+                                                mode="contained-tonal"
+                                                icon="timer"
+                                                compact
+                                                style={{ marginTop: 8 }}
+                                                onPress={() => router.push({ pathname: '/timer', params: { taskId: task.id.toString() } })}
+                                            >
+                                                View Timer
+                                            </Button>
                                         </View>
                                     )}
                                 </Card.Content>
@@ -286,6 +317,7 @@ const TasksPage: React.FC = () => {
                                     </Button>
                                     <Button
                                         disabled={Boolean(activeTaskId)}
+                                        mode="outlined"
                                         textColor={theme.colors.error}
                                         onPress={() => handleDeleteTask(task.id)}
                                     >

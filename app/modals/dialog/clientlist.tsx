@@ -74,6 +74,7 @@ const ClientDialog = () => {
                     </Button>
                     <Button
                         compact
+                        mode="outlined"
                         textColor={theme.colors.error}
                         icon="delete"
                         onPress={() => handleClientDelete(item.id)}

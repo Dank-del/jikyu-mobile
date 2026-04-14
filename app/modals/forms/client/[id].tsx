@@ -10,9 +10,11 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useClients, useRates } from "@data/queries";
 import { eq } from "drizzle-orm";
 import { useSnackbar } from "@components/SnackbarProvider";
+import { useSettings } from "@lib/settings";
 
 const ClientForm = () => {
     const { id } = useLocalSearchParams();
+    const { settings } = useSettings();
     const router = useRouter();
     let update = !(id === 'new');
     const { control, handleSubmit, formState: { errors }, reset } = useForm<typeof clients.$inferInsert>();
@@ -139,7 +141,7 @@ const ClientForm = () => {
                     monetized &&
                     <View style={styles.rateContainer}>
                         <TextInput
-                            label="Rate per Hour (USD)"
+                            label={`Rate per Hour (${settings.currency})`}
                             keyboardType="numeric"
                             value={rate ? rate.toString() : ''}
                             onChangeText={handleRateChange}
