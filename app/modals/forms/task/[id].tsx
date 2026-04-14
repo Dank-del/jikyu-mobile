@@ -9,23 +9,23 @@ import { createAlert } from "@lib/alert";
 import { useDatabase } from "@hooks/useDatabaseConnection";
 import { router, useLocalSearchParams } from "expo-router";
 import { useProjects, useTasks } from "@data/queries";
+import { useSnackbar } from "@components/SnackbarProvider";
 
 const TaskForm: React.FC = () => {
     const theme = useTheme();
     const { id } = useLocalSearchParams()
     const update = !(id === 'new');
-    console.log("TaskForm", id);
     const tasksQuery = useTasks();
     const task = tasksQuery.data?.find(t => t.id === parseInt(id!.toString()));
     const queryClient = useQueryClient();
     const db = useDatabase();
     const { control, handleSubmit, formState: { errors }, reset } = useForm<typeof tasks.$inferInsert>();
     const projectsQuery = useProjects();
+    const { showSnackbar } = useSnackbar();
 
     const taskMutation = useMutation({
         mutationKey: ['tasks'],
         mutationFn: async (task: typeof tasks.$inferInsert) => {
-            console.log("taskMutation", task, update, task.id);
             if (update) {
                 const updatedTask = await db.update(tasks).set({
                     id: task.id,
@@ -70,11 +70,12 @@ const TaskForm: React.FC = () => {
         }
 
         reset();
-        router.push("../");
+        showSnackbar(update ? 'Task updated' : 'Task created');
+        router.back();
     });
 
     return (
-        <Dialog visible>
+        <Dialog visible onDismiss={() => router.back()}>
             <Dialog.Title>{update ? 'Edit Task' : 'Add Task'}</Dialog.Title>
             <Dialog.Content style={{ display: 'flex', gap: 5 }}>
                 <Text>
@@ -94,6 +95,7 @@ const TaskForm: React.FC = () => {
                                 onBlur={onBlur}
                                 onChangeText={onChange}
                                 value={value}
+                                mode="outlined"
                             />
                         );
                     }}
@@ -110,6 +112,7 @@ const TaskForm: React.FC = () => {
                                 onBlur={onBlur}
                                 onChangeText={onChange}
                                 value={value}
+                                mode="outlined"
                             />
                         );
                     }}
@@ -127,7 +130,7 @@ const TaskForm: React.FC = () => {
                                 onBlur={onBlur}
                                 onValueChange={onChange}
                             >
-                                <Picker.Item color={theme.colors.onSurface} style={{ color: 'white' }} label="Select Project..." value="" />
+                                <Picker.Item color={theme.colors.onSurface} label="Select Project..." value="" />
                                 {projectsQuery.isFetched && projectsQuery.data?.map(project => (
                                     <Picker.Item color={theme.colors.onSurface} key={project.id} label={project.name} value={project.id} />
                                 ))}
@@ -137,7 +140,7 @@ const TaskForm: React.FC = () => {
                 />
             </Dialog.Content>
             <Dialog.Actions>
-                <Button onPress={() => { router.push("../"); reset() }}>Cancel</Button>
+                <Button onPress={() => { router.back(); reset() }}>Cancel</Button>
                 <Button onPress={onSubmit}>Save</Button>
             </Dialog.Actions>
         </Dialog>

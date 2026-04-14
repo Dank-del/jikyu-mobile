@@ -1,6 +1,6 @@
 import { Dialog, Button, TextInput, Text, Switch } from "react-native-paper";
 import { useForm, Controller } from "react-hook-form";
-import { clients } from "@data/schema";
+import { clients, rates } from "@data/schema";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import React, { useState } from "react";
 import { useDatabase } from "@hooks/useDatabaseConnection";
@@ -8,6 +8,8 @@ import { createAlert } from "@lib/alert";
 import { View, StyleSheet } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useClients, useRates } from "@data/queries";
+import { eq } from "drizzle-orm";
+import { useSnackbar } from "@components/SnackbarProvider";
 
 const ClientForm = () => {
     const { id } = useLocalSearchParams();
@@ -28,22 +30,55 @@ const ClientForm = () => {
         }
     };
 
-    const handleRateSubmit = () => {
-        if (rate !== undefined) {
-            // Perform your action with the rate here
-            console.log('Rate per hour:', rate);
-        } else {
-            console.log('Please enter a valid rate');
-        }
-    };
     const [monetized, setMonetized] = React.useState(rate !== undefined);
+    const { showSnackbar } = useSnackbar();
     const db = useDatabase();
     const queryClient = useQueryClient()
+
+    const saveRate = async (clientId: number) => {
+        if (monetized && rate !== undefined) {
+            const existingRate = rateQuery.data?.find(r => r.clientId === clientId);
+            if (existingRate) {
+                await db.update(rates).set({ ratePerHour: rate }).where(eq(rates.id, existingRate.id)).execute();
+            } else {
+                await db.insert(rates).values({ ratePerHour: rate, clientId }).execute();
+            }
+        } else if (!monetized) {
+            const existingRate = rateQuery.data?.find(r => r.clientId === clientId);
+            if (existingRate) {
+                await db.delete(rates).where(eq(rates.id, existingRate.id)).execute();
+            }
+        }
+        queryClient.refetchQueries({ queryKey: ['rate'] });
+    };
+
+    const clientMutation = useMutation({
+        mutationKey: ['clients'],
+        mutationFn: async (data: typeof clients.$inferInsert) => {
+            if (update && existingClient) {
+                const up = await db.update(clients).set({
+                    id: existingClient.id,
+                    name: data.name,
+                });
+                await saveRate(existingClient.id);
+                queryClient.refetchQueries({ queryKey: ['clients'] });
+                return up;
+            }
+            const ins = await db.insert(clients).values({
+                name: data.name,
+            });
+            const newClientId = (ins as any).lastInsertRowId ?? (ins as any).lastInsertRowid;
+            if (newClientId) {
+                await saveRate(newClientId);
+            }
+            queryClient.refetchQueries({ queryKey: ['clients'] });
+            reset();
+            setRate(undefined);
+            return ins;
+        }
+    });
+
     const onSubmit = handleSubmit(async data => {
-        // await db.insert(clients).values({
-        //     name: data.name,
-        // }).execute()
-        // console.log("client-form-submit", data);
         const succ = await clientMutation.mutateAsync({
             ...data
         });
@@ -54,32 +89,11 @@ const ClientForm = () => {
             })
             return;
         }
-        router.push("../")
+        showSnackbar(update ? 'Client updated' : 'Client created');
+        router.back();
     });
-    const clientMutation = useMutation({
-        mutationKey: ['clients'],
-        mutationFn: async (data: typeof clients.$inferInsert) => {
-            if (update && existingClient) {
-                const up = await db.update(clients).set({
-                    id: existingClient.id,
-                    name: data.name,
-                })
-                queryClient.refetchQueries({ queryKey: ['clients'] })
-                return up;
-            }
-            const ins = await db.insert(clients).values({
-                name: data.name,
-            })
-            queryClient.refetchQueries({ queryKey: ['clients'] })
-            reset();
-            setRate(undefined);
-            return ins;
-        }
-    })
-    console.log("client", existingClient)
-    console.log("mutation-error", clientMutation.error)
     return (
-        <Dialog visible>
+        <Dialog visible onDismiss={() => router.back()}>
             <Dialog.Title>{update ? "Edit Client" : "Add new Client"}</Dialog.Title>
             <Dialog.Content>
                 <Text>
@@ -99,7 +113,7 @@ const ClientForm = () => {
                                 onChangeText={onChange}
                                 value={value}
                                 inputMode="text"
-                                // mode="outlined"
+                                mode="outlined"
                                 defaultValue={existingClient?.name}
                             />
                         );
@@ -123,45 +137,32 @@ const ClientForm = () => {
                 </View>
                 {
                     monetized &&
-                    <View style={styles.container}>
+                    <View style={styles.rateContainer}>
                         <TextInput
                             label="Rate per Hour (USD)"
                             keyboardType="numeric"
                             value={rate ? rate.toString() : ''}
                             onChangeText={handleRateChange}
+                            mode="outlined"
                             style={styles.input}
                         />
-                        <Button mode="contained" onPress={handleRateSubmit} style={styles.button}>
-                            Save
-                        </Button>
                     </View>
                 }
             </Dialog.Content>
             <Dialog.Actions>
-                <Button onPress={onSubmit}>Add</Button>
-                <Button onPress={() => {
-                    router.push("../")
-                }}>
-                    Cancel
-                </Button>
+                <Button onPress={() => router.back()}>Cancel</Button>
+                <Button onPress={onSubmit}>{update ? "Save" : "Add"}</Button>
             </Dialog.Actions>
         </Dialog>
     );
 };
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 20,
+    rateContainer: {
+        marginTop: 8,
     },
     input: {
-        width: '80%',
-        marginBottom: 20,
-    },
-    button: {
-        width: '50%',
+        width: '100%',
     },
 });
 

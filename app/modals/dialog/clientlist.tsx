@@ -1,9 +1,8 @@
 import { clients } from "@data/schema";
 import { useDatabase } from "@hooks/useDatabaseConnection";
-import { useQuery } from "@tanstack/react-query";
 import React from "react";
-import { View, Text, StyleSheet, FlatList, TouchableOpacity } from "react-native";
-import { Dialog, Button, useTheme } from "react-native-paper";
+import { View, StyleSheet, FlatList, TouchableOpacity } from "react-native";
+import { Dialog, Button, Text, useTheme } from "react-native-paper";
 import { createAlert } from "@lib/alert";
 import { DatabaseMethods } from "@data/methods";
 import { router } from "expo-router";
@@ -18,22 +17,21 @@ const ClientDialog = () => {
     const handleClientDelete = async (clientId: typeof clients.$inferInsert['id']) => {
         if (!clientId) {
             createAlert({
-                title: "Error in deletion",
+                title: "Error",
                 message: "Id is undefined"
-            })
+            });
+            return;
         }
-        console.log("Client ID", clientId);
         createAlert({
             title: "Delete Client",
-            message: "Are you sure you want to delete this client? This action CANNOT be undone.",
+            message: "Are you sure you want to delete this client? All associated projects and tasks will also be deleted. This action CANNOT be undone.",
             buttons: [
                 {
                     text: "Cancel",
-                    style: "cancel",
-                    onPress: () => console.log("Cancel Pressed")
+                    style: "cancel"
                 },
                 {
-                    text: "OK",
+                    text: "Delete",
                     style: "destructive",
                     onPress: async () => {
                         const deleted = await dbMethods.deleteClient(clientId);
@@ -48,34 +46,38 @@ const ClientDialog = () => {
                     }
                 }
             ]
-        })
-    }
-
-    // const [visible, setVisible] = useState(false);
+        });
+    };
 
     const renderItem = ({ item }: { item: typeof clients.$inferInsert }) => {
         return (
-            <View style={styles.itemContainer}>
-                <TouchableOpacity onPress={() => router.push({
-                    pathname: '/modals/forms/client/[id]',
-                    params: {
-                        id: item.id,
-                    }
-                })}>
-                    <View style={styles.item}>
-                        <Text style={[styles.clientName, { color: theme.colors.onSurface }]}>{item.name}</Text>
-                    </View>
-                </TouchableOpacity>
-                <View style={styles.buttonContainer}>
-                    <Button style={styles.buttonContainer} icon='account-edit' onPress={() => router.push({
+            <View style={[styles.itemContainer, { borderBottomColor: theme.colors.outlineVariant }]}>
+                <TouchableOpacity
+                    style={{ flex: 1 }}
+                    onPress={() => router.push({
                         pathname: '/modals/forms/client/[id]',
-                        params: {
-                            id: item.id,
-                        }
-                    })}>
+                        params: { id: item.id }
+                    })}
+                >
+                    <Text variant="bodyLarge" style={{ paddingVertical: 12 }}>{item.name}</Text>
+                </TouchableOpacity>
+                <View style={styles.buttonRow}>
+                    <Button
+                        compact
+                        icon="pencil"
+                        onPress={() => router.push({
+                            pathname: '/modals/forms/client/[id]',
+                            params: { id: item.id }
+                        })}
+                    >
                         Edit
                     </Button>
-                    <Button style={styles.buttonContainer} textColor="red" icon="delete" onPress={() => handleClientDelete(item.id)}>
+                    <Button
+                        compact
+                        textColor={theme.colors.error}
+                        icon="delete"
+                        onPress={() => handleClientDelete(item.id)}
+                    >
                         Delete
                     </Button>
                 </View>
@@ -84,28 +86,30 @@ const ClientDialog = () => {
     };
 
     return (
-        <Dialog visible>
+        <Dialog visible onDismiss={() => router.back()}>
             <Dialog.Title>Clients</Dialog.Title>
             <Dialog.Content>
-                {clientsQuery.isFetched && (
+                {clientsQuery.isFetched && (clientsQuery.data?.length ?? 0) === 0 && (
+                    <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, textAlign: 'center', paddingVertical: 16 }}>
+                        No clients yet. Add your first client to get started.
+                    </Text>
+                )}
+                {clientsQuery.isFetched && (clientsQuery.data?.length ?? 0) > 0 && (
                     <FlatList
                         data={clientsQuery.data}
                         renderItem={renderItem}
-                        keyExtractor={(item) => item.id.toString()}
+                        keyExtractor={(item) => item.id!.toString()}
                     />
                 )}
             </Dialog.Content>
             <Dialog.Actions>
-                <Button onPress={() => {
+                <Button icon="account-plus" onPress={() => {
                     router.push({
                         pathname: '/modals/forms/client/[id]',
-                        params: {
-                            id: 'new',
-                        }
-                    })
-                    // setVisible(false);
-                }}>Add New Client</Button>
-                <Button onPress={() => router.push('../')}>Close</Button>
+                        params: { id: 'new' }
+                    });
+                }}>Add Client</Button>
+                <Button onPress={() => router.back()}>Close</Button>
             </Dialog.Actions>
         </Dialog>
     );
@@ -116,17 +120,10 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-    },
-    item: {
-        flex: 1,
-        padding: 15,
         borderBottomWidth: 1,
-        borderBottomColor: '#ddd',
+        paddingHorizontal: 4,
     },
-    clientName: {
-        fontSize: 16,
-    },
-    buttonContainer: {
+    buttonRow: {
         flexDirection: 'row',
         alignItems: 'center',
     },

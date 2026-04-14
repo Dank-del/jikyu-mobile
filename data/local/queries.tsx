@@ -43,7 +43,6 @@ export const useTimeTrackings = () => {
             return await db.select().from(timeTrackings);
         },
         refetchOnWindowFocus: "always",
-        refetchInterval: 1000,
     });
 }
 

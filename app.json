@@ -20,6 +20,9 @@
       "bundleIdentifier": "sayan.jikyu-mobile"
     },
     "android": {
+      "permissions": [
+        "android.permission.DETECT_SCREEN_CAPTURE"
+      ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -34,7 +37,10 @@
       "eas": {
         "projectId": "604181d2-93ef-4c31-bf9e-e2ff5770a759"
       }
-    }
+    },
+    "plugins": [
+      "expo-router"
+    ]
   },
   "name": "jikyu-mobile"
 }

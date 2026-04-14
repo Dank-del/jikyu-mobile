@@ -1,144 +1,230 @@
 import React from "react";
 import { ScrollView, View, StyleSheet } from "react-native";
-import { Card, Text, Button, useTheme } from "react-native-paper";
+import { Card, Text, Button, Icon, useTheme } from "react-native-paper";
 import { BarChart } from "react-native-gifted-charts";
 import { router } from "expo-router";
-import { useProjects, useTasks, useTimeTrackings } from "@data/queries";
+import { useProjects, useRates, useTasks, useTimeTrackings } from "@data/queries";
 import { DateTime } from "luxon";
 
 const Dashboard = () => {
-    // Generate fake data
     const theme = useTheme();
     const tasks = useTasks();
     const projects = useProjects();
     const timeTrackingData = useTimeTrackings();
-    const totalTasks = tasks.data?.length
-    const totalProjects = projects.data?.length
-    const weekdayInitials = ['M', 'T', 'W', 'T', 'F', 'S', 'S']; // Weekday initials array
-    // Map the data to the format needed for the bar chart
-    const barData = weekdayInitials.map(day => {
-        // Filter the data for the specific day
-        const dayData = timeTrackingData.data?.filter(entry => weekdayInitials[DateTime.fromISO(entry.startTime).localWeekday] === day);
+    const rateQuery = useRates();
+    const totalTasks = tasks.data?.length ?? 0;
+    const totalProjects = projects.data?.length ?? 0;
 
-        // Sum the time spent for the day
-        // sum the difference between the start and end time of each entry
-        const value = dayData?.reduce((acc, curr) => {
-            const startTime = DateTime.fromISO(curr.startTime);
-            const endTime = DateTime.fromISO(curr.endTime!);
-            return acc + endTime.diff(startTime, 'hours').hours;
-        }, 0) || 0;
-
-        // Return the data point for the bar chart
-        return { value, label: day };
+    // Bar chart: hours per day for the current week
+    const weekStart = DateTime.local().startOf('week');
+    const barData = Array.from({ length: 7 }, (_, i) => {
+        const dayDate = weekStart.plus({ days: i });
+        const dayEntries = timeTrackingData.data?.filter(entry => {
+            const entryDate = DateTime.fromISO(entry.startTime);
+            return entryDate.hasSame(dayDate, 'day');
+        }) || [];
+        const value = dayEntries.reduce((acc, curr) => {
+            if (!curr.endTime) return acc;
+            const start = DateTime.fromISO(curr.startTime);
+            const end = DateTime.fromISO(curr.endTime);
+            return acc + end.diff(start, 'hours').hours;
+        }, 0);
+        return { value: Math.round(value * 100) / 100, label: dayDate.toFormat('ccc') };
     });
 
-    return (
-        <View>
-            <ScrollView>
-                <Card style={styles.card}>
-                    <Text style={styles.headerText}>
-                        {totalTasks} Task(s)
-                    </Text>
-                    <Text style={styles.subHeaderText}>
-                        for {totalProjects} Project(s)
-                    </Text>
-                </Card>
-                <Card style={styles.card}>
-                    <Text style={styles.headerText}>
-                        Upcoming Tasks
-                    </Text>
-                    <View style={styles.upcomingTasksContainer}>
-                        {tasks.data?.map((task, index) => (
-                            <Text key={index} style={styles.upcomingTask}>
-                                {task.name}
-                            </Text>
-                        ))}
-                    </View>
-                </Card>
-                <Card style={styles.card}>
-                    <Text style={styles.headerText}>
-                        Productivity Insights
-                    </Text>
-                    <View style={{
-                        overflow: 'hidden'
+    // Upcoming tasks: sorted by project deadline, limited to 5
+    const upcomingTasks = tasks.data
+        ?.map(task => {
+            const project = projects.data?.find(p => p.id === task.projectId);
+            return { ...task, deadline: project?.deadline, projectName: project?.name };
+        })
+        .filter(t => t.deadline && DateTime.fromISO(t.deadline) >= DateTime.local())
+        .sort((a, b) => DateTime.fromISO(a.deadline!).toMillis() - DateTime.fromISO(b.deadline!).toMillis())
+        .slice(0, 5) ?? [];
 
-                    }}>
-                        <BarChart
-                            xAxisLabelTextStyle={{
-                                color: theme.colors.secondary
-                            }}
-                            yAxisTextStyle={{
-                                color: theme.colors.secondary
-                            }}
-                            barWidth={15}
-                            color="white"
-                            frontColor={theme.colors.primary}
-                            data={barData}
-                        />
-                    </View>
-                </Card>
+    // Earnings summary
+    const computeEarnings = (since: DateTime) => {
+        return timeTrackingData.data?.reduce((total, tt) => {
+            if (!tt.endTime) return total;
+            const start = DateTime.fromISO(tt.startTime);
+            if (start < since) return total;
+            const end = DateTime.fromISO(tt.endTime);
+            const hours = end.diff(start, 'hours').hours;
+            const task = tasks.data?.find(t => t.id === tt.taskId);
+            const project = projects.data?.find(p => p.id === task?.projectId);
+            const rate = rateQuery.data?.find(r => r.clientId === project?.clientId);
+            return total + (rate ? hours * rate.ratePerHour : 0);
+        }, 0) || 0;
+    };
+
+    const weeklyEarnings = computeEarnings(weekStart);
+    const monthlyEarnings = computeEarnings(DateTime.local().startOf('month'));
+    const hasEarnings = weeklyEarnings > 0 || monthlyEarnings > 0;
+
+    return (
+        <View style={{ flex: 1 }}>
+            <ScrollView contentContainerStyle={styles.scrollContent}>
+                {/* Stats Card */}
                 <Card style={styles.card}>
-                    <Text style={styles.headerText}>
-                        Quick Actions
-                    </Text>
-                    <View style={{
-                        display: 'flex',
-                        flexDirection: 'row',
-                        flexWrap: 'wrap',
-                        columnGap: 8,
-                    }}>
-                        <Button mode="contained" style={styles.quickActionButton} onPress={() => {
-                            router.push({
-                                pathname: "modals/forms/project/[id]",
-                                params: {
-                                    id: 'new'
-                                }
-                            })
-                        }}>
-                            Add Project
-                        </Button>
-                        <Button mode="contained" style={styles.quickActionButton}
-                            onPress={() => router.push({
-                                pathname: "modals/forms/task/[id]",
-                                params: {
-                                    id: 'new'
-                                }
-                            })}
-                        >
-                            Add Task
-                        </Button>
-                        <Button mode="contained" style={styles.quickActionButton} onPress={() => router.push("/modals/dialog/clientlist")}>View Clients</Button>
-                    </View>
-                    {/* Add more quick actions as needed */}
+                    <Card.Content>
+                        <Text variant="headlineMedium" style={{ color: theme.colors.onSurface }}>
+                            {totalTasks} Task{totalTasks !== 1 ? 's' : ''}
+                        </Text>
+                        <Text variant="bodyLarge" style={{ color: theme.colors.onSurfaceVariant }}>
+                            across {totalProjects} project{totalProjects !== 1 ? 's' : ''}
+                        </Text>
+                    </Card.Content>
                 </Card>
-                {/* Add more widgets based on the suggested requirements */}
+
+                {/* Earnings Card */}
+                {hasEarnings && (
+                    <Card style={styles.card}>
+                        <Card.Content>
+                            <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 8 }}>
+                                Earnings
+                            </Text>
+                            <View style={styles.earningsRow}>
+                                <View style={styles.earningsItem}>
+                                    <Text variant="headlineSmall" style={{ color: theme.colors.primary }}>
+                                        ${weeklyEarnings.toFixed(2)}
+                                    </Text>
+                                    <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                                        This week
+                                    </Text>
+                                </View>
+                                <View style={styles.earningsItem}>
+                                    <Text variant="headlineSmall" style={{ color: theme.colors.primary }}>
+                                        ${monthlyEarnings.toFixed(2)}
+                                    </Text>
+                                    <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                                        This month
+                                    </Text>
+                                </View>
+                            </View>
+                        </Card.Content>
+                    </Card>
+                )}
+
+                {/* Upcoming Tasks Card */}
+                <Card style={styles.card}>
+                    <Card.Content>
+                        <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 8 }}>
+                            Upcoming Tasks
+                        </Text>
+                        {upcomingTasks.length === 0 ? (
+                            <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>
+                                No upcoming tasks
+                            </Text>
+                        ) : (
+                            upcomingTasks.map((task) => (
+                                <View key={task.id} style={styles.upcomingTaskRow}>
+                                    <View style={{ flex: 1 }}>
+                                        <Text variant="bodyMedium" style={{ color: theme.colors.onSurface }}>
+                                            {task.name}
+                                        </Text>
+                                        {task.projectName && (
+                                            <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                                                {task.projectName}
+                                            </Text>
+                                        )}
+                                    </View>
+                                </View>
+                            ))
+                        )}
+                    </Card.Content>
+                </Card>
+
+                {/* Productivity Insights */}
+                <Card style={styles.card}>
+                    <Card.Content>
+                        <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 8 }}>
+                            This Week
+                        </Text>
+                        <View style={{ overflow: 'hidden' }}>
+                            <BarChart
+                                xAxisLabelTextStyle={{ color: theme.colors.onSurfaceVariant }}
+                                yAxisTextStyle={{ color: theme.colors.onSurfaceVariant }}
+                                barWidth={22}
+                                noOfSections={4}
+                                barBorderRadius={4}
+                                frontColor={theme.colors.primary}
+                                data={barData}
+                                yAxisThickness={0}
+                                xAxisThickness={0}
+                                hideRules
+                                spacing={18}
+                            />
+                        </View>
+                    </Card.Content>
+                </Card>
+
+                {/* Quick Actions */}
+                <Card style={styles.card}>
+                    <Card.Content>
+                        <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 8 }}>
+                            Quick Actions
+                        </Text>
+                        <View style={styles.quickActionsGrid}>
+                            <Button
+                                mode="contained"
+                                icon="briefcase-plus"
+                                style={styles.quickActionButton}
+                                onPress={() => router.push({ pathname: "modals/forms/project/[id]", params: { id: 'new' } })}
+                            >
+                                Add Project
+                            </Button>
+                            <Button
+                                mode="contained"
+                                icon="plus-circle"
+                                style={styles.quickActionButton}
+                                onPress={() => router.push({ pathname: "modals/forms/task/[id]", params: { id: 'new' } })}
+                            >
+                                Add Task
+                            </Button>
+                            <Button
+                                mode="contained-tonal"
+                                icon="account-group"
+                                style={styles.quickActionButton}
+                                onPress={() => router.push("/modals/dialog/clientlist")}
+                            >
+                                View Clients
+                            </Button>
+                        </View>
+                    </Card.Content>
+                </Card>
             </ScrollView>
         </View>
     )
 }
 
 const styles = StyleSheet.create({
+    scrollContent: {
+        paddingBottom: 16,
+    },
     card: {
-        padding: 20,
-        margin: 10,
+        marginHorizontal: 12,
+        marginTop: 12,
     },
-    headerText: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        marginBottom: 10,
+    earningsRow: {
+        flexDirection: 'row',
+        gap: 24,
     },
-    subHeaderText: {
-        fontSize: 18,
+    earningsItem: {
+        flex: 1,
     },
-    upcomingTasksContainer: {
-        marginTop: 10,
+    upcomingTaskRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 6,
     },
-    upcomingTask: {
-        fontSize: 16,
-        marginBottom: 5,
+    quickActionsGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 8,
     },
     quickActionButton: {
-        marginTop: 10,
+        flexGrow: 1,
+        minWidth: '45%',
     },
 });
 

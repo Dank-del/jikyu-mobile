@@ -20,6 +20,7 @@ const tasks = sqliteTable("tasks", {
     id: integer("id").primaryKey({ autoIncrement: true }),
     name: text("name").notNull(),
     description: text("description").notNull(),
+    status: text("status").notNull().default("todo"),
     projectId: integer("project_id")
         .notNull()
         .references(() => projects.id, { onDelete: "cascade" }),

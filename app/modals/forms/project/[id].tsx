@@ -12,6 +12,7 @@ import { eq } from "drizzle-orm";
 import { DateTime } from 'luxon';
 import { router, useLocalSearchParams } from "expo-router";
 import { useClients } from "@data/queries";
+import { useSnackbar } from "@components/SnackbarProvider";
 
 const ProjectForm = () => {
     const theme = useTheme();
@@ -30,7 +31,7 @@ const ProjectForm = () => {
     const [showDatePicker, setShowDatePicker] = React.useState(false);
     const { control, handleSubmit, formState: { errors }, reset } = useForm<typeof projects.$inferInsert>();
     const clientQuery = useClients();
-    console.log("clients", clientQuery.data);
+    const { showSnackbar } = useSnackbar();
     const projectMutation = useMutation({
         mutationKey: ['projects'],
         mutationFn: async (project: typeof projects.$inferInsert) => {
@@ -57,7 +58,6 @@ const ProjectForm = () => {
         }
     });
     const onSubmit = handleSubmit(async data => {
-        console.log("proj-submit", data);
         if (!data.deadline) {
             createAlert({
                 title: "Error",
@@ -67,8 +67,6 @@ const ProjectForm = () => {
         }
 
         const client = (await db.select().from(clients).where(eq(clients.id, data.clientId)));
-
-        console.log("ClientRepository", client);
 
         if (!client) {
             createAlert({
@@ -94,10 +92,11 @@ const ProjectForm = () => {
             return;
         }
 
-        router.push("../");
+        showSnackbar(update ? 'Project updated' : 'Project created');
+        router.back();
     });
     return (
-        <Dialog visible>
+        <Dialog visible onDismiss={() => router.back()}>
             <Dialog.Title>{update ? "Edit Project" : "New Project"}</Dialog.Title>
             <Dialog.Content style={{
                 display: 'flex',
@@ -115,7 +114,7 @@ const ProjectForm = () => {
                                 onBlur={onBlur}
                                 onChangeText={onChange}
                                 value={value}
-                                // mode="outlined"
+                                mode="outlined"
                                 defaultValue={existingProject?.name}
                             />
                         );
@@ -133,7 +132,7 @@ const ProjectForm = () => {
                                 onBlur={onBlur}
                                 onChangeText={onChange}
                                 value={value}
-                                // mode="outlined"
+                                mode="outlined"
                                 defaultValue={existingProject?.description}
                             />
                         );
@@ -166,12 +165,12 @@ const ProjectForm = () => {
                         )
                     }}
                 />
-                <Button mode="contained" onPress={() => router.push({
+                <Button mode="contained-tonal" icon="account-plus" onPress={() => router.push({
                     pathname: '/modals/forms/client/[id]',
                     params: {
                         id: 'new'
                     }
-                })}>New</Button>
+                })}>New Client</Button>
                 <Controller
                     control={control}
                     name="deadline"
@@ -210,8 +209,8 @@ const ProjectForm = () => {
                 />
             </Dialog.Content>
             <Dialog.Actions>
+                <Button onPress={() => { router.back(); reset() }}>Cancel</Button>
                 <Button onPress={onSubmit}>Save</Button>
-                <Button onPress={() => { router.push("../"); reset() }}>Cancel</Button>
             </Dialog.Actions>
         </Dialog>
     );

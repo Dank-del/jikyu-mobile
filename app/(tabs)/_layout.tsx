@@ -21,7 +21,7 @@ export default function TabLayout() {
             
         }} tabBar={({ navigation, state, descriptors, insets }) => (
             <BottomNavigation.Bar
-                theme={colorScheme ? CombinedDarkTheme : CombinedDefaultTheme}
+                theme={colorScheme === 'dark' ? CombinedDarkTheme : CombinedDefaultTheme}
                 navigationState={state}
                 safeAreaInsets={insets}
                 onTabPress={({ route, preventDefault }) => {

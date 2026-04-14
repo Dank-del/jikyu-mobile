@@ -11,7 +11,6 @@ export const DatabaseProvider = forwardRef<React.Ref<ExpoSQLiteDatabase>, { chil
     const expo = openDatabaseSync("tasks.db");
     const db = drizzle(expo, { schema });
     const { success, error } = useMigrations(db, migrations);
-    console.log("DatabaseProvider", success, error);
     if (error) {
         return (
             <View>
